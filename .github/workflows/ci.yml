@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: rideshare
+          POSTGRES_PASSWORD: rideshare
+          POSTGRES_DB: rideshare
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rideshare -d rideshare"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://rideshare:rideshare@localhost:5432/rideshare
+      REDIS_URL: redis://localhost:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - name: Apply schema (proves migrations run clean)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/backend/schema.sql

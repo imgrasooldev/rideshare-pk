@@ -1,0 +1,22 @@
+{
+  "name": "rideshare-pk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Carpool marketplace for Pakistan — providers with spare seats meet commuters.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace apps/backend",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down"
+  }
+}
