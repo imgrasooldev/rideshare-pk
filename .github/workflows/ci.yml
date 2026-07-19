@@ -40,3 +40,7 @@ jobs:
       - run: npm run test
       - name: Apply schema (proves migrations run clean)
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/backend/schema.sql
+      - run: npm run build
+      - name: Auth smoke against real Postgres + Redis
+        working-directory: apps/backend
+        run: node scripts/auth-smoke.mjs

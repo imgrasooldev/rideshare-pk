@@ -23,5 +23,7 @@ while (Date.now() < deadline) {
   }
 }
 
+// No process.exit(): forcing exit with live fetch/child handles trips a
+// libuv assertion on Windows. Set the code and let the loop drain.
+process.exitCode = ok ? 0 : 1;
 child.kill();
-process.exit(ok ? 0 : 1);
