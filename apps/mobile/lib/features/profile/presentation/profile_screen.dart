@@ -39,34 +39,71 @@ class ProfileScreen extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          CircleAvatar(
-            radius: 40,
-            child: Text(
-              (user.name?.isNotEmpty == true ? user.name![0] : user.phone.substring(3, 4))
-                  .toUpperCase(),
-              style: theme.textTheme.headlineMedium,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(user.name ?? 'Add your name',
-              textAlign: TextAlign.center, style: theme.textTheme.titleLarge),
-          Text(user.phone, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            children: [
-              Chip(
-                avatar: Icon(
-                  user.verified ? Icons.verified : Icons.hourglass_empty,
-                  size: 18,
-                  color: user.verified ? Colors.green.shade700 : null,
-                ),
-                label: Text(user.verified ? 'Verified' : 'Not verified'),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.colorScheme.primary,
+                  Color.lerp(theme.colorScheme.primary, Colors.black, 0.35)!,
+                ],
               ),
-              Chip(label: Text(user.role)),
-              Chip(label: Text(user.city)),
-            ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      child: Text(
+                        (user.name?.isNotEmpty == true
+                                ? user.name![0]
+                                : user.phone.substring(3, 4))
+                            .toUpperCase(),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(user.name ?? 'Add your name',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                  color: Colors.white, fontWeight: FontWeight.w800)),
+                          Text(user.phone,
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: Colors.white.withValues(alpha: 0.8))),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => showEditProfileSheet(context, user),
+                      icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                      tooltip: 'Edit profile',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    _HeaderBadge(
+                      icon: user.verified ? Icons.verified : Icons.hourglass_empty,
+                      label: user.verified ? 'Verified' : 'Not verified',
+                    ),
+                    const SizedBox(width: 8),
+                    _HeaderBadge(icon: Icons.badge_outlined, label: user.role),
+                    const SizedBox(width: 8),
+                    _HeaderBadge(icon: Icons.location_city_rounded, label: user.city),
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           FilledButton.tonalIcon(
@@ -74,16 +111,55 @@ class ProfileScreen extends StatelessWidget {
             icon: const Icon(Icons.edit_outlined),
             label: const Text('Edit profile'),
           ),
-          const Divider(height: 32),
-          _VerificationSection(user: user),
-          const Divider(height: 32),
-          const _VehiclesSection(),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: _VerificationSection(user: user),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: const _VehiclesSection(),
+            ),
+          ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: () => context.read<AuthBloc>().add(const AuthLogoutRequested()),
             icon: const Icon(Icons.logout),
             label: const Text('Log out'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderBadge extends StatelessWidget {
+  const _HeaderBadge({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(label,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
         ],
       ),
     );

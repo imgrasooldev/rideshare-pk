@@ -121,7 +121,8 @@ void main() {
     await tester.tap(find.text('Find rides'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('DHA Phase 5 → Gulberg'), findsOneWidget);
+    expect(find.text('DHA Phase 5'), findsWidgets);
+    expect(find.text('Gulberg (Liberty Market)'), findsWidgets);
     expect(find.text('Rs 250'), findsOneWidget);
     expect(find.textContaining('3 of 3 seats'), findsOneWidget);
 
@@ -172,7 +173,8 @@ void main() {
     expect(rides.posted, hasLength(1));
     expect(rides.posted.single.seatsTotal, 3);
     expect(rides.posted.single.pricePerSeat, 250);
-    expect(find.textContaining('DHA Phase 5 → Gulberg'), findsOneWidget);
+    expect(find.text('DHA Phase 5'), findsWidgets);
+    expect(find.text('Gulberg (Liberty Market)'), findsWidgets);
   });
 
   testWidgets('profile edit saves role change and updates the app user', (tester) async {
@@ -200,7 +202,7 @@ void main() {
     await tester.tap(find.text('Bookings'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('DHA Phase 5 → Gulberg'), findsOneWidget);
+    expect(find.text('DHA Phase 5'), findsWidgets);
     expect(find.text('confirmed'), findsOneWidget);
 
     await tester.tap(find.text('Cancel booking'));

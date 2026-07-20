@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/route_points.dart';
+import '../../../core/widgets/status_pill.dart';
 import '../bloc/my_bookings_bloc.dart';
 import '../data/models/booking.dart';
 
@@ -13,21 +16,20 @@ class MyBookingsScreen extends StatelessWidget {
     return BlocBuilder<MyBookingsBloc, MyBookingsState>(
       builder: (context, state) => switch (state) {
         MyBookingsLoading() => const Center(child: CircularProgressIndicator()),
-        MyBookingsError(:final message) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(message),
-                TextButton(
-                  onPressed: () =>
-                      context.read<MyBookingsBloc>().add(const MyBookingsRequested()),
-                  child: const Text('Retry'),
-                ),
-              ],
+        MyBookingsError(:final message) => EmptyState(
+            icon: Icons.wifi_off_rounded,
+            title: 'Could not load bookings',
+            message: message,
+            isError: true,
+            action: TextButton(
+              onPressed: () => context.read<MyBookingsBloc>().add(const MyBookingsRequested()),
+              child: const Text('Retry'),
             ),
           ),
-        MyBookingsLoaded(:final bookings) when bookings.isEmpty => const Center(
-            child: Text('No bookings yet — find a ride on the Search tab.'),
+        MyBookingsLoaded(:final bookings) when bookings.isEmpty => const EmptyState(
+            icon: Icons.confirmation_number_outlined,
+            title: 'No bookings yet',
+            message: 'Find a ride on the Search tab — your seats will show up here.',
           ),
         MyBookingsLoaded(:final bookings, :final cancelling) => RefreshIndicator(
             onRefresh: () async =>
@@ -55,13 +57,6 @@ class _BookingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = switch (booking.status) {
-      'confirmed' => Colors.green.shade700,
-      'cancelled' => theme.colorScheme.outline,
-      'completed' => theme.colorScheme.primary,
-      _ => theme.colorScheme.tertiary,
-    };
-
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -70,22 +65,22 @@ class _BookingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    '${booking.originLabel ?? '—'} → ${booking.destLabel ?? '—'}',
-                    style: theme.textTheme.titleMedium,
+                  child: SizedBox(
+                    height: 56,
+                    child: RoutePoints(
+                      origin: booking.originLabel ?? '—',
+                      destination: booking.destLabel ?? '—',
+                    ),
                   ),
                 ),
-                Chip(
-                  label: Text(booking.status),
-                  labelStyle: theme.textTheme.labelSmall?.copyWith(color: Colors.white),
-                  backgroundColor: statusColor,
-                  visualDensity: VisualDensity.compact,
-                ),
+                const SizedBox(width: 12),
+                StatusPill(booking.status),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               [
                 if (booking.departAt != null)
@@ -93,13 +88,14 @@ class _BookingCard extends StatelessWidget {
                 '${booking.seats} seat${booking.seats > 1 ? 's' : ''}',
                 if (booking.pricePerSeat != null) 'Rs ${booking.pricePerSeat! * booking.seats}',
               ].join('  ·  '),
-              style: theme.textTheme.bodyMedium,
+              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
             ),
             if (booking.isActive) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
+                  style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
                   onPressed: cancelling
                       ? null
                       : () => context

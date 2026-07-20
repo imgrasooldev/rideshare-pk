@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/route_points.dart';
+import '../../../core/widgets/status_pill.dart';
 import '../../bookings/bloc/booking_action_cubit.dart';
 import '../bloc/ride_search_bloc.dart';
 import '../data/models/ride.dart';
@@ -81,12 +84,24 @@ class _SearchScreenState extends State<SearchScreen> {
           const SizedBox(height: 16),
           BlocBuilder<RideSearchBloc, RideSearchState>(
             builder: (context, state) => switch (state) {
-              RideSearchInitial() => const _Hint('Pick your route and search for shared rides.'),
+              RideSearchInitial() => const EmptyState(
+                  icon: Icons.route_outlined,
+                  title: 'Where are you headed?',
+                  message: 'Pick your route and search for shared rides.',
+                ),
               RideSearchLoading() =>
                 const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
-              RideSearchError(:final message) => _Hint(message, isError: true),
-              RideSearchLoaded(:final rides) when rides.isEmpty =>
-                const _Hint('No rides on this route yet. Try another day or a wider corridor.'),
+              RideSearchError(:final message) => EmptyState(
+                  icon: Icons.wifi_off_rounded,
+                  title: 'Something went wrong',
+                  message: message,
+                  isError: true,
+                ),
+              RideSearchLoaded(:final rides) when rides.isEmpty => const EmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'No rides on this route yet',
+                  message: 'Try another day or a wider corridor — new rides are posted daily.',
+                ),
               RideSearchLoaded(:final rides, :final hasMore, :final loadingMore) => Column(
                   children: [
                     for (final ride in rides) _RideCard(ride: ride),
@@ -142,6 +157,18 @@ class _SearchForm extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Row(
+              children: [
+                Icon(Icons.near_me_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 6),
+                Text('Where to?',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
@@ -227,9 +254,9 @@ class _RideCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final time = DateFormat('h:mm a').format(ride.departAt);
     final bookingState = context.watch<BookingActionCubit>().state;
     final inFlight = bookingState is BookingInFlight && bookingState.rideId == ride.id;
+    final seatsLow = ride.seatsAvailable > 0 && ride.seatsAvailable <= 1;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -239,39 +266,57 @@ class _RideCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text('${ride.originLabel} → ${ride.destLabel}',
-                      style: theme.textTheme.titleMedium),
-                ),
-                if (ride.ladiesOnly)
-                  const Tooltip(
-                    message: 'Ladies only',
-                    child: Icon(Icons.female, color: Colors.pink),
+                  child: SizedBox(
+                    height: 56,
+                    child: RoutePoints(
+                      origin: ride.originLabel,
+                      destination: ride.destLabel,
+                    ),
                   ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('Rs ${ride.pricePerSeat}',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                            color: theme.colorScheme.primary, fontWeight: FontWeight.w800)),
+                    Text('/seat',
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: theme.colorScheme.outline)),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.schedule, size: 16, color: theme.colorScheme.outline),
+                Icon(Icons.schedule_rounded, size: 16, color: theme.colorScheme.outline),
                 const SizedBox(width: 4),
-                Text(time),
-                const SizedBox(width: 16),
-                Icon(Icons.event_seat, size: 16, color: theme.colorScheme.outline),
+                Text(DateFormat('h:mm a').format(ride.departAt),
+                    style: theme.textTheme.labelLarge),
+                const SizedBox(width: 14),
+                Icon(Icons.airline_seat_recline_normal_rounded,
+                    size: 16,
+                    color: seatsLow ? const Color(0xFFB26A00) : theme.colorScheme.outline),
                 const SizedBox(width: 4),
-                Text('${ride.seatsAvailable} of ${ride.seatsTotal} seats'),
+                Text(
+                  '${ride.seatsAvailable} of ${ride.seatsTotal} seats',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                      color: seatsLow ? const Color(0xFFB26A00) : null,
+                      fontWeight: seatsLow ? FontWeight.w700 : null),
+                ),
                 const Spacer(),
-                Text('Rs ${ride.pricePerSeat}',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(color: theme.colorScheme.primary)),
-                Text('/seat', style: theme.textTheme.bodySmall),
+                if (ride.ladiesOnly) const StatusPill('Ladies only', color: Color(0xFFC2185B)),
               ],
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: FilledButton.tonal(
+              child: FilledButton(
                 onPressed: ride.seatsAvailable > 0 && !inFlight
                     ? () => context.read<BookingActionCubit>().book(ride.id, 1)
                     : null,
@@ -283,27 +328,6 @@ class _RideCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Hint extends StatelessWidget {
-  const _Hint(this.text, {this.isError = false});
-  final String text;
-  final bool isError;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: isError ? theme.colorScheme.error : theme.colorScheme.outline,
         ),
       ),
     );
