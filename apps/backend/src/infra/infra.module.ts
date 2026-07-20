@@ -3,9 +3,11 @@ import { Pool } from "pg";
 import { loadConfig, type AppConfig } from "../config/config.js";
 import { InMemoryKvStore } from "../shared/kv.js";
 import { RedisKvStore } from "../shared/redis-kv.js";
+import { InMemoryBookingRepository, PgBookingRepository } from "../bookings/bookings.repo.js";
 import { InMemoryRideRepository, PgRideRepository } from "../rides/rides.repo.js";
 import {
   APP_CONFIG,
+  BOOKING_REPOSITORY,
   KV_STORE,
   PG_POOL,
   RIDE_REPOSITORY,
@@ -64,11 +66,17 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
       inject: [PG_POOL],
       useFactory: (pool: Pool | null) =>
         pool ? new PgRideRepository(pool) : new InMemoryRideRepository()
+    },
+    {
+      provide: BOOKING_REPOSITORY,
+      inject: [PG_POOL, RIDE_REPOSITORY],
+      useFactory: (pool: Pool | null, rides: InMemoryRideRepository) =>
+        pool ? new PgBookingRepository(pool) : new InMemoryBookingRepository(rides)
     }
   ],
   exports: [
     APP_CONFIG, KV_STORE, PG_POOL,
-    USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY
+    USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY, BOOKING_REPOSITORY
   ]
 })
 export class InfraModule {}

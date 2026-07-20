@@ -141,7 +141,51 @@ try {
     const got = await call("GET", `/rides/${ride.id}`, { token: t });
     if (got.originLabel !== "Gulberg Liberty Market") throw new Error("get ride wrong");
 
-    console.log("API SMOKE OK (admin review + ride post/search against real DB)");
+    // THE RACE: 4 riders fire concurrently at the 3-seat ride. Exactly 3 must
+    // win — the conditional UPDATE in the booking transaction is the referee.
+    const racers = await Promise.all(
+      Array.from({ length: 4 }, () => loginAs("0302" + rnd()))
+    );
+    const raceResults = await Promise.all(
+      racers.map((r, i) =>
+        fetch(`${BASE}/bookings`, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${r.accessToken}` },
+          body: JSON.stringify({ rideId: ride.id, seats: 1, idempotencyKey: `race-${ride.id}-${i}` })
+        }).then((res) => res.status)
+      )
+    );
+    const winners = raceResults.filter((s) => s === 201).length;
+    const losers = raceResults.filter((s) => s === 409).length;
+    if (winners !== 3 || losers !== 1) {
+      throw new Error(`race broken: statuses=${raceResults.join(",")} (expected three 201s, one 409)`);
+    }
+    const fullRide = await call("GET", `/rides/${ride.id}`, { token: t });
+    if (fullRide.seatsAvailable !== 0 || fullRide.status !== "full") {
+      throw new Error(`ride should be full: ${fullRide.seatsAvailable} seats, ${fullRide.status}`);
+    }
+
+    // Idempotent replay by a winner: same booking back, still 0 seats.
+    const winnerIdx = raceResults.findIndex((s) => s === 201);
+    const replay = await call("POST", "/bookings", {
+      token: racers[winnerIdx].accessToken,
+      expectStatus: 201,
+      body: { rideId: ride.id, seats: 1, idempotencyKey: `race-${ride.id}-${winnerIdx}` }
+    });
+    if ((await call("GET", `/rides/${ride.id}`, { token: t })).seatsAvailable !== 0) {
+      throw new Error("idempotent replay decremented seats again");
+    }
+
+    // Cancel restores the seat and reopens the ride; my-bookings lists it.
+    await call("POST", `/bookings/${replay.id}/cancel`, { token: racers[winnerIdx].accessToken });
+    const reopened = await call("GET", `/rides/${ride.id}`, { token: t });
+    if (reopened.seatsAvailable !== 1 || reopened.status !== "open") {
+      throw new Error("cancel did not restore seat");
+    }
+    const mineList = await call("GET", "/bookings/mine", { token: racers[winnerIdx].accessToken });
+    if (mineList.items[0]?.status !== "cancelled") throw new Error("bookings/mine wrong");
+
+    console.log("API SMOKE OK (admin review + rides + race-safe bookings against real DB)");
   } else {
     // In-memory mode can't flip admin — but the driver-verification gate must hold.
     await call("POST", "/rides", {
