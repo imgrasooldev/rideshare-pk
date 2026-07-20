@@ -4,12 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 /// Design tokens for the whole platform. One source of truth: screens never
 /// hard-code colors, radii, or text styles — they read the theme.
 abstract final class AppTheme {
-  /// Ride-hailing energy: electric lime (inDrive/Bolt family) — high
-  /// visibility, unmistakably transport.
-  static const seed = Color(0xFF84CC16);
+  /// Uber/Yango-class identity: jet-black foundation + vivid signal orange.
+  static const seed = Color(0xFFF97316);
 
   /// Punchier primary than M3's tonal mapping would give us in light mode.
-  static const _primaryLight = Color(0xFF63970A);
+  static const _primaryLight = Color(0xFFEA580C);
+
+  /// Jet-black brand surfaces (login backdrop, hero headers).
+  static const ink = Color(0xFF09090B);
+  static const inkWarm = Color(0xFF26160C);
 
   static const radiusCard = 20.0;
   static const radiusField = 14.0;

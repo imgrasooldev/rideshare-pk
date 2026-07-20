@@ -52,10 +52,10 @@ export default function LoginPage() {
     }`;
 
   return (
-    <div className="grid min-h-screen place-items-center bg-gradient-to-br from-[#0c0e09] via-[#1f2b09] to-[#365314] p-6">
+    <div className="grid min-h-screen place-items-center bg-gradient-to-br from-[#09090b] via-[#151517] to-[#26160c] p-6">
       <div className="w-full max-w-105">
         <div className="mb-6 text-center text-white">
-          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-brand-400 text-slate-900 shadow-[0_0_40px_rgba(163,230,53,0.45)]">
+          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-brand-500 text-white shadow-[0_0_44px_rgba(249,115,22,0.5)]">
             <Car size={26} />
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">Rideshare PK</h1>
@@ -96,7 +96,7 @@ export default function LoginPage() {
               />
               {error && <p className="text-center text-sm text-red-600">{error}</p>}
               <button
-                className="w-full rounded-lg bg-brand-400 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-brand-300 disabled:opacity-50"
+                className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
                 disabled={busy}
               >
                 {busy ? "Signing in…" : "Sign in"}
@@ -118,7 +118,7 @@ export default function LoginPage() {
               />
               {error && <p className="text-center text-sm text-red-600">{error}</p>}
               <button
-                className="w-full rounded-lg bg-brand-400 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-brand-300 disabled:opacity-50"
+                className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
                 disabled={busy}
               >
                 {busy ? "Sending…" : "Send code"}
@@ -146,7 +146,7 @@ export default function LoginPage() {
               />
               {error && <p className="text-center text-sm text-red-600">{error}</p>}
               <button
-                className="w-full rounded-lg bg-brand-400 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-brand-300 disabled:opacity-50"
+                className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
                 disabled={busy}
               >
                 {busy ? "Verifying…" : "Verify"}

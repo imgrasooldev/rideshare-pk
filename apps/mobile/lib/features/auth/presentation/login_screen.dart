@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../bloc/auth_bloc.dart';
 import 'forgot_password_sheet.dart';
 
@@ -14,14 +15,12 @@ class LoginScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
+          // Jet-black brand backdrop (Uber-style) with a warm ember corner.
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              scheme.primary,
-              Color.lerp(scheme.primary, Colors.black, 0.45)!,
-            ],
+            colors: [AppTheme.ink, Color(0xFF151517), AppTheme.inkWarm],
           ),
         ),
         child: SafeArea(
@@ -87,11 +86,16 @@ class _Brand extends StatelessWidget {
           width: 76,
           height: 76,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: onPrimary.withValues(alpha: 0.14),
-            border: Border.all(color: onPrimary.withValues(alpha: 0.35)),
+            borderRadius: BorderRadius.circular(22),
+            color: theme.colorScheme.primary,
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.45),
+                blurRadius: 44,
+              ),
+            ],
           ),
-          child: Icon(Icons.directions_car_filled_rounded, size: 40, color: onPrimary),
+          child: const Icon(Icons.directions_car_filled_rounded, size: 40, color: Colors.white),
         ),
         const SizedBox(height: 14),
         Text('Rideshare PK',

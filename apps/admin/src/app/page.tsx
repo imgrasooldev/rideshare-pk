@@ -92,12 +92,12 @@ export default function DashboardPage() {
                         <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gRides" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#84cc16" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#84cc16" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#f97316" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gBookings" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eef2f5" vertical={false} />
@@ -132,14 +132,14 @@ export default function DashboardPage() {
                     <Area
                       type="monotone"
                       dataKey="rides"
-                      stroke="#84cc16"
+                      stroke="#f97316"
                       strokeWidth={2}
                       fill="url(#gRides)"
                     />
                     <Area
                       type="monotone"
                       dataKey="bookings"
-                      stroke="#f59e0b"
+                      stroke="#8b5cf6"
                       strokeWidth={2}
                       fill="url(#gBookings)"
                     />

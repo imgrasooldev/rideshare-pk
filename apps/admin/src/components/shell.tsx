@@ -75,7 +75,7 @@ export default function Shell({
             scripts/make-admin.mjs, then sign in again.
           </p>
           <button
-            className="mt-6 rounded-lg bg-brand-400 px-5 py-2.5 text-sm font-bold text-slate-900 hover:bg-brand-300"
+            className="mt-6 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
             onClick={() => {
               clearSession();
               window.location.assign("/admin/login/");
@@ -92,7 +92,7 @@ export default function Shell({
     <div className="flex min-h-screen">
       <aside className="fixed inset-y-0 flex w-64 flex-col bg-sidebar text-slate-300">
         <div className="flex items-center gap-3 px-6 py-6">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-400 text-slate-900">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500 text-white">
             <Car size={20} />
           </div>
           <div>

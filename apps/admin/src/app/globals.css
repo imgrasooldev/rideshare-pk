@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  /* Ride-hailing energy: near-black surfaces + electric lime accent */
-  --color-brand-50: #f7fee7;
-  --color-brand-100: #ecfccb;
-  --color-brand-300: #bef264;
-  --color-brand-400: #a3e635;
-  --color-brand-500: #84cc16;
-  --color-brand-600: #65a30d;
-  --color-brand-700: #4d7c0f;
-  --color-sidebar: #0c0e09;
-  --color-sidebar-hover: #191d12;
-  --color-page: #f6f8f3;
+  /* Uber/Yango-class: jet-black foundation + vivid signal-orange accent */
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-sidebar: #0a0a0b;
+  --color-sidebar-hover: #1b1b1f;
+  --color-page: #fafafa;
 }
 
 body {
