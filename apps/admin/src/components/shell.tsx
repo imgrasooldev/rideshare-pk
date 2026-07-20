@@ -47,7 +47,7 @@ export default function Shell({
   useEffect(() => {
     const u = currentUser();
     if (!u) {
-      router.replace("/login/");
+      window.location.assign("/admin/login/");
       return;
     }
     setUser(u);
@@ -75,10 +75,10 @@ export default function Shell({
             scripts/make-admin.mjs, then sign in again.
           </p>
           <button
-            className="mt-6 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            className="mt-6 rounded-lg bg-brand-400 px-5 py-2.5 text-sm font-bold text-slate-900 hover:bg-brand-300"
             onClick={() => {
               clearSession();
-              router.replace("/login/");
+              window.location.assign("/admin/login/");
             }}
           >
             Switch account
@@ -92,7 +92,7 @@ export default function Shell({
     <div className="flex min-h-screen">
       <aside className="fixed inset-y-0 flex w-64 flex-col bg-sidebar text-slate-300">
         <div className="flex items-center gap-3 px-6 py-6">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-600 text-white">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-400 text-slate-900">
             <Car size={20} />
           </div>
           <div>
@@ -111,20 +111,20 @@ export default function Shell({
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   active
-                    ? "bg-brand-600/15 text-white"
+                    ? "bg-brand-400/15 text-white"
                     : "hover:bg-sidebar-hover hover:text-white"
                 }`}
               >
-                <Icon size={18} className={active ? "text-brand-500" : ""} />
+                <Icon size={18} className={active ? "text-brand-400" : ""} />
                 {item.label}
-                {active && <span className="ml-auto h-5 w-1 rounded-full bg-brand-500" />}
+                {active && <span className="ml-auto h-5 w-1 rounded-full bg-brand-400" />}
               </Link>
             );
           })}
         </nav>
         <div className="border-t border-white/5 p-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-600/20 text-sm font-bold text-brand-500">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-400/20 text-sm font-bold text-brand-400">
               {initials(user)}
             </div>
             <div className="min-w-0 flex-1">
@@ -140,7 +140,7 @@ export default function Shell({
               className="text-slate-500 hover:text-white"
               onClick={() => {
                 clearSession();
-                router.replace("/login/");
+                window.location.assign("/admin/login/");
               }}
             >
               <LogOut size={17} />
@@ -161,14 +161,14 @@ export default function Shell({
 }
 
 /** Route API failures: 403 → denied screen, 401 → login. */
-export function routeApiError(e: unknown, router: { replace: (p: string) => void }): string {
+export function routeApiError(e: unknown, _router?: unknown): string {
   if (e instanceof ApiError) {
     if (e.status === 403) {
       window.dispatchEvent(new Event("admin-denied"));
       return "";
     }
     if (e.status === 401) {
-      router.replace("/login/");
+      window.location.assign("/admin/login/");
       return "";
     }
     return e.message;

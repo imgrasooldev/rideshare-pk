@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -88,16 +88,16 @@ export default function DashboardPage() {
                   <AreaChart data={series} margin={{ top: 16, right: 8, left: -18, bottom: 0 }}>
                     <defs>
                       <linearGradient id="gSignups" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gRides" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00a06b" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#00a06b" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#84cc16" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#84cc16" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gBookings" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eef2f5" vertical={false} />
@@ -125,21 +125,21 @@ export default function DashboardPage() {
                     <Area
                       type="monotone"
                       dataKey="signups"
-                      stroke="#3b82f6"
+                      stroke="#38bdf8"
                       strokeWidth={2}
                       fill="url(#gSignups)"
                     />
                     <Area
                       type="monotone"
                       dataKey="rides"
-                      stroke="#00a06b"
+                      stroke="#84cc16"
                       strokeWidth={2}
                       fill="url(#gRides)"
                     />
                     <Area
                       type="monotone"
                       dataKey="bookings"
-                      stroke="#8b5cf6"
+                      stroke="#f59e0b"
                       strokeWidth={2}
                       fill="url(#gBookings)"
                     />

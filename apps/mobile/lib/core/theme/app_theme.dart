@@ -4,8 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 /// Design tokens for the whole platform. One source of truth: screens never
 /// hard-code colors, radii, or text styles — they read the theme.
 abstract final class AppTheme {
-  /// Emerald — trustworthy, fresh, unmistakably Pakistan.
-  static const seed = Color(0xFF00875A);
+  /// Ride-hailing energy: electric lime (inDrive/Bolt family) — high
+  /// visibility, unmistakably transport.
+  static const seed = Color(0xFF84CC16);
+
+  /// Punchier primary than M3's tonal mapping would give us in light mode.
+  static const _primaryLight = Color(0xFF63970A);
 
   static const radiusCard = 20.0;
   static const radiusField = 14.0;
@@ -14,8 +18,9 @@ abstract final class AppTheme {
   static ThemeData dark() => _build(Brightness.dark);
 
   static ThemeData _build(Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
     final isLight = brightness == Brightness.light;
+    var scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+    if (isLight) scheme = scheme.copyWith(primary: _primaryLight);
     final base = ThemeData(useMaterial3: true, colorScheme: scheme);
     final text = GoogleFonts.plusJakartaSansTextTheme(base.textTheme).apply(
       bodyColor: scheme.onSurface,
