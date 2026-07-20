@@ -1,0 +1,32 @@
+# Fly.io config for the backend API.
+# Region: bom (Mumbai) — lowest latency to Pakistan among Fly regions.
+app = "rideshare-pk"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "4000"
+  # Dev OTP until an SMS aggregator is wired (notifications module).
+  # DATABASE_URL / REDIS_URL / JWT secrets are Fly secrets, not env.
+  OTP_DEV_MODE = "true"
+  CITY_DEFAULT = "lahore"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
