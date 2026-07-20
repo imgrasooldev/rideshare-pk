@@ -1,7 +1,8 @@
 # Fly.io config for the backend API.
-# Region: bom (Mumbai) — lowest latency to Pakistan among Fly regions.
+# Region: sin (Singapore) — bom (Mumbai) is closer to Pakistan but had no
+# machine capacity at deploy time; retry a move to bom later if it frees up.
 app = "rideshare-pk"
-primary_region = "bom"
+primary_region = "sin"
 
 [build]
   dockerfile = "Dockerfile"
