@@ -65,6 +65,10 @@ void main() {
   });
 
   Future<void> login(WidgetTester tester) async {
+    // Tall phone viewport so scrollable content stays reachable in tests.
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), '03001234567');

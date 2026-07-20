@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+﻿import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryBookingRepository } from "../bookings/bookings.repo.js";
 import { InMemoryRideRepository } from "../rides/rides.repo.js";
 import { InMemoryRatingRepository } from "./ratings.repo.js";
@@ -32,6 +32,7 @@ describe("RatingsService", () => {
       seatsTotal: 3,
       pricePerSeat: 250,
       vertical: "office",
+      vehicleType: "car",
       ladiesOnly: false,
       city: "lahore"
     });
@@ -61,6 +62,7 @@ describe("RatingsService", () => {
       seatsTotal: 3,
       pricePerSeat: 200,
       vertical: "office",
+      vehicleType: "car",
       ladiesOnly: false,
       city: "lahore"
     });

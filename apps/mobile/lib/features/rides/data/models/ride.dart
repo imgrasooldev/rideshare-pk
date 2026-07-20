@@ -17,6 +17,8 @@ class Ride extends Equatable {
     this.originLng = 0,
     this.destLat = 0,
     this.destLng = 0,
+    this.vehicleType = 'car',
+    this.paymentMethod = 'cash',
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) => Ride(
@@ -35,6 +37,8 @@ class Ride extends Equatable {
         originLng: (json['originLng'] as num?)?.toDouble() ?? 0,
         destLat: (json['destLat'] as num?)?.toDouble() ?? 0,
         destLng: (json['destLng'] as num?)?.toDouble() ?? 0,
+        vehicleType: json['vehicleType'] as String? ?? 'car',
+        paymentMethod: json['paymentMethod'] as String? ?? 'cash',
       );
 
   final String id;
@@ -52,11 +56,14 @@ class Ride extends Equatable {
   final double originLng;
   final double destLat;
   final double destLng;
+  final String vehicleType;
+  final String paymentMethod;
 
   @override
   List<Object?> get props => [
         id, driverId, originLabel, destLabel, departAt, seatsTotal, seatsAvailable,
-        pricePerSeat, ladiesOnly, status, city, originLat, originLng, destLat, destLng
+        pricePerSeat, ladiesOnly, status, city, originLat, originLng, destLat, destLng,
+        vehicleType, paymentMethod
       ];
 }
 

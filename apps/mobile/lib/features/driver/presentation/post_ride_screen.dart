@@ -22,7 +22,15 @@ class _PostRideScreenState extends State<PostRideScreen> {
   final Set<int> _days = {1, 2, 3, 4, 5}; // Mon–Fri
   int _seats = 3;
   bool _ladiesOnly = false;
+  String _vehicleType = 'car';
   final _priceController = TextEditingController(text: '250');
+
+  int get _maxSeats => switch (_vehicleType) {
+        'bike' => 1,
+        'hiace' => 18,
+        'minivan' => 10,
+        _ => 6,
+      };
 
   static DateTime _nextMorning() {
     final tomorrow = DateTime.now().add(const Duration(days: 1));
@@ -66,6 +74,7 @@ class _PostRideScreenState extends State<PostRideScreen> {
           recurringDays: (_days.toList()..sort()).map((d) => d % 7).toList(),
           seatsTotal: _seats,
           pricePerSeat: price,
+          vehicleType: _vehicleType,
           ladiesOnly: _ladiesOnly,
         );
   }
@@ -119,6 +128,24 @@ class _PostRideScreenState extends State<PostRideScreen> {
               label: Text(DateFormat('EEE, d MMM • h:mm a').format(_departAt)),
             ),
             const SizedBox(height: 16),
+            Text('Vehicle', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final type in vehicleTypes)
+                  ChoiceChip(
+                    avatar: Icon(vehicleTypeIcon(type), size: 16),
+                    label: Text(vehicleTypeLabel(type)),
+                    selected: _vehicleType == type,
+                    onSelected: (_) => setState(() {
+                      _vehicleType = type;
+                      if (_seats > _maxSeats) _seats = _maxSeats;
+                    }),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
             Text('Repeats on', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Wrap(
@@ -144,7 +171,7 @@ class _PostRideScreenState extends State<PostRideScreen> {
                 ),
                 Text('$_seats', style: Theme.of(context).textTheme.titleLarge),
                 IconButton(
-                  onPressed: _seats < 6 ? () => setState(() => _seats++) : null,
+                  onPressed: _seats < _maxSeats ? () => setState(() => _seats++) : null,
                   icon: const Icon(Icons.add_circle_outline),
                 ),
               ],
@@ -156,6 +183,7 @@ class _PostRideScreenState extends State<PostRideScreen> {
               decoration: const InputDecoration(
                 labelText: 'Price per seat (PKR, fuel cost-share)',
                 prefixText: 'Rs ',
+                helperText: 'Paid in cash to you — no app payments yet',
                 border: OutlineInputBorder(),
               ),
             ),

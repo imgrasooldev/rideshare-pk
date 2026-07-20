@@ -45,6 +45,7 @@ class PostRideCubit extends Cubit<PostRideState> {
     required List<int> recurringDays,
     required int seatsTotal,
     required int pricePerSeat,
+    String vehicleType = 'car',
     bool ladiesOnly = false,
   }) async {
     if (state is PostRideSubmitting) return;
@@ -57,6 +58,7 @@ class PostRideCubit extends Cubit<PostRideState> {
         recurringDays: recurringDays,
         seatsTotal: seatsTotal,
         pricePerSeat: pricePerSeat,
+        vehicleType: vehicleType,
         ladiesOnly: ladiesOnly,
       );
       emit(PostRideSuccess(ride));

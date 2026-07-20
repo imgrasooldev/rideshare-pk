@@ -1,8 +1,11 @@
 import type { Pool } from "pg";
 
+export type VehicleType = "car" | "bike" | "hiace" | "minivan";
+
 export interface VehicleRecord {
   id: string;
   ownerId: string;
+  vehicleType: VehicleType;
   make: string;
   model: string;
   plate: string;
@@ -12,6 +15,7 @@ export interface VehicleRecord {
 }
 
 export interface NewVehicle {
+  vehicleType: VehicleType;
   make: string;
   model: string;
   plate: string;
@@ -26,16 +30,17 @@ export interface VehicleRepository {
   setVerified(id: string, verified: boolean): Promise<void>;
 }
 
-const COLS = `id, owner_id AS "ownerId", make, model, plate, seats, doc_urls AS "docUrls", verified`;
+const COLS = `id, owner_id AS "ownerId", vehicle_type AS "vehicleType", make, model, plate, seats,
+  doc_urls AS "docUrls", verified`;
 
 export class PgVehicleRepository implements VehicleRepository {
   constructor(private readonly pool: Pool) {}
 
   async create(ownerId: string, v: NewVehicle): Promise<VehicleRecord> {
     const { rows } = await this.pool.query(
-      `INSERT INTO vehicles (owner_id, make, model, plate, seats, doc_urls)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING ${COLS}`,
-      [ownerId, v.make, v.model, v.plate, v.seats, v.docUrls]
+      `INSERT INTO vehicles (owner_id, vehicle_type, make, model, plate, seats, doc_urls)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${COLS}`,
+      [ownerId, v.vehicleType, v.make, v.model, v.plate, v.seats, v.docUrls]
     );
     return rows[0];
   }

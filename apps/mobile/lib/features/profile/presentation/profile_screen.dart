@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/data/models/user.dart';
+import '../../rides/data/rides_repository.dart'
+    show vehicleTypeIcon, vehicleTypeLabel, vehicleTypes;
 import '../../trust/bloc/verifications_cubit.dart';
 import '../../vehicles/bloc/vehicles_cubit.dart';
 import '../bloc/profile_cubit.dart';
@@ -271,37 +273,63 @@ class _VehiclesSection extends StatelessWidget {
     final model = TextEditingController();
     final plate = TextEditingController();
     final seats = TextEditingController(text: '4');
+    var type = 'car';
     final submitted = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Add vehicle'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                  controller: make,
-                  decoration: const InputDecoration(labelText: 'Make (e.g. Suzuki)')),
-              TextField(
-                  controller: model,
-                  decoration: const InputDecoration(labelText: 'Model (e.g. Alto)')),
-              TextField(
-                  controller: plate,
-                  decoration: const InputDecoration(labelText: 'Plate (e.g. LEB-1234)')),
-              TextField(
-                controller: seats,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Passenger seats'),
-              ),
-            ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Add vehicle'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: [
+                    for (final t in vehicleTypes)
+                      DropdownMenuItem(
+                        value: t,
+                        child: Row(children: [
+                          Icon(vehicleTypeIcon(t), size: 18),
+                          const SizedBox(width: 8),
+                          Text(vehicleTypeLabel(t)),
+                        ]),
+                      ),
+                  ],
+                  onChanged: (v) => setDialogState(() {
+                    type = v ?? 'car';
+                    if (type == 'bike') seats.text = '1';
+                    if (type == 'hiace') seats.text = '12';
+                    if (type == 'minivan') seats.text = '7';
+                    if (type == 'car') seats.text = '4';
+                  }),
+                ),
+                TextField(
+                    controller: make,
+                    decoration: const InputDecoration(labelText: 'Make (e.g. Suzuki)')),
+                TextField(
+                    controller: model,
+                    decoration: const InputDecoration(labelText: 'Model (e.g. Alto)')),
+                TextField(
+                    controller: plate,
+                    decoration: const InputDecoration(labelText: 'Plate (e.g. LEB-1234)')),
+                TextField(
+                  controller: seats,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Passenger seats'),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Add')),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Add')),
-        ],
       ),
     );
     if (submitted == true) {
@@ -310,6 +338,7 @@ class _VehiclesSection extends StatelessWidget {
         model: model.text.trim(),
         plate: plate.text.trim(),
         seats: int.tryParse(seats.text.trim()) ?? 4,
+        vehicleType: type,
       );
     }
     for (final c in [make, model, plate, seats]) {
@@ -347,7 +376,7 @@ class _VehiclesSection extends StatelessWidget {
                 children: [
                   for (final v in vehicles)
                     ListTile(
-                      leading: const Icon(Icons.directions_car_outlined),
+                      leading: Icon(vehicleTypeIcon(v.vehicleType)),
                       title: Text('${v.make} ${v.model}'),
                       subtitle: Text('${v.plate} · ${v.seats} seats'),
                       trailing: v.verified

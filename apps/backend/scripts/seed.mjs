@@ -48,6 +48,8 @@ try {
     [drivers]
   );
 
+  // Marketplace mix: cars, bikes, hiaces, minivans across corridors.
+  const TYPES = ["car", "car", "bike", "hiace", "car", "minivan", "car", "hiace"];
   // Two departures per corridor tomorrow: 08:00 and 09:00 PKT (UTC+5).
   const tomorrow = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
   let count = 0;
@@ -56,6 +58,8 @@ try {
     const from = HUBS[fromKey];
     const to = HUBS[toKey];
     const driverId = drivers[c % drivers.length];
+    const vehicleType = TYPES[c];
+    const seats = vehicleType === "bike" ? 1 : vehicleType === "hiace" ? 12 : vehicleType === "minivan" ? 7 : 3 + (c % 2);
     const ladiesOnly = c % 4 === 0; // seed drivers 0,4 are female by construction
     for (const hour of ["08", "09"]) {
       // jitter pickup point ±~500m so rides aren't stacked on one coordinate
@@ -64,14 +68,14 @@ try {
       await db.query(
         `INSERT INTO rides (driver_id, origin_label, origin_geo, dest_label, dest_geo,
                             depart_at, recurring_days, seats_total, seats_available,
-                            price_per_seat, vertical, ladies_only, city)
+                            price_per_seat, vertical, vehicle_type, ladies_only, city)
          VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography,
                  $5, ST_SetSRID(ST_MakePoint($6, $7), 4326)::geography,
-                 $8, '{1,2,3,4,5}', $9, $9, $10, 'office', $11, 'lahore')`,
+                 $8, '{1,2,3,4,5}', $9, $9, $10, 'office', $11, $12, 'lahore')`,
         [
           driverId, from.label, jLng, jLat, to.label, to.lng, to.lat,
           `${tomorrow}T${hour}:00:00+05:00`,
-          3 + (c % 2), 150 + (c % 5) * 50, ladiesOnly
+          seats, 150 + (c % 5) * 50, vehicleType, ladiesOnly
         ]
       );
       count++;

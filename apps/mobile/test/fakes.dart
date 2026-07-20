@@ -104,10 +104,14 @@ class FakeRidesRepository implements RidesRepository {
     required DateTime departBefore,
     double radiusKm = 3,
     bool? ladiesOnly,
+    String? vehicleType,
     String? cursor,
   }) async =>
       RidePage(
-        items: rides.where((r) => ladiesOnly == null || r.ladiesOnly == ladiesOnly).toList(),
+        items: rides
+            .where((r) => ladiesOnly == null || r.ladiesOnly == ladiesOnly)
+            .where((r) => vehicleType == null || r.vehicleType == vehicleType)
+            .toList(),
       );
 
   @override
@@ -121,6 +125,7 @@ class FakeRidesRepository implements RidesRepository {
     required List<int> recurringDays,
     required int seatsTotal,
     required int pricePerSeat,
+    String vehicleType = 'car',
     bool ladiesOnly = false,
   }) async {
     final ride = Ride(
@@ -132,6 +137,7 @@ class FakeRidesRepository implements RidesRepository {
       seatsTotal: seatsTotal,
       seatsAvailable: seatsTotal,
       pricePerSeat: pricePerSeat,
+      vehicleType: vehicleType,
       ladiesOnly: ladiesOnly,
       status: 'open',
       city: 'lahore',
@@ -156,6 +162,7 @@ class FakeVehiclesRepository implements VehiclesRepository {
     required String model,
     required String plate,
     required int seats,
+    String vehicleType = 'car',
   }) async {
     final v = Vehicle(
       id: 'v${vehicles.length + 1}',
@@ -164,6 +171,7 @@ class FakeVehiclesRepository implements VehiclesRepository {
       plate: plate.toUpperCase(),
       seats: seats,
       verified: false,
+      vehicleType: vehicleType,
     );
     vehicles.add(v);
     return v;

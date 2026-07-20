@@ -8,6 +8,7 @@ class Vehicle extends Equatable {
     required this.plate,
     required this.seats,
     required this.verified,
+    this.vehicleType = 'car',
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
@@ -17,6 +18,7 @@ class Vehicle extends Equatable {
         plate: json['plate'] as String,
         seats: json['seats'] as int,
         verified: json['verified'] as bool? ?? false,
+        vehicleType: json['vehicleType'] as String? ?? 'car',
       );
 
   final String id;
@@ -25,7 +27,8 @@ class Vehicle extends Equatable {
   final String plate;
   final int seats;
   final bool verified;
+  final String vehicleType;
 
   @override
-  List<Object?> get props => [id, make, model, plate, seats, verified];
+  List<Object?> get props => [id, make, model, plate, seats, verified, vehicleType];
 }

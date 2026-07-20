@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryRideRepository } from "../rides/rides.repo.js";
 import { InMemoryBus } from "../shared/bus.js";
 import { InMemoryKvStore } from "../shared/kv.js";
@@ -34,6 +34,7 @@ describe("TrackingService", () => {
       seatsTotal: 3,
       pricePerSeat: 250,
       vertical: "office",
+      vehicleType: "car",
       ladiesOnly: false,
       city: "lahore"
     });

@@ -4,6 +4,7 @@ export type RideStatus = "open" | "full" | "cancelled" | "completed";
 export type Vertical =
   | "office" | "school" | "city" | "rentacar" | "ladies"
   | "parcel" | "corporate" | "airport" | "events";
+export type RideVehicleType = "car" | "bike" | "hiace" | "minivan";
 
 export interface RideRecord {
   id: string;
@@ -21,6 +22,8 @@ export interface RideRecord {
   seatsAvailable: number;
   pricePerSeat: number;
   vertical: Vertical;
+  vehicleType: RideVehicleType;
+  paymentMethod: "cash";
   ladiesOnly: boolean;
   status: RideStatus;
   city: string;
@@ -40,6 +43,7 @@ export interface NewRide {
   seatsTotal: number;
   pricePerSeat: number;
   vertical: Vertical;
+  vehicleType: RideVehicleType;
   ladiesOnly: boolean;
   city: string;
 }
@@ -53,6 +57,7 @@ export interface RideSearch {
   departAfter: string;
   departBefore: string;
   ladiesOnly?: boolean;
+  vehicleType?: RideVehicleType;
   city?: string;
   cursor: string | null;
   limit: number;
@@ -92,7 +97,8 @@ const COLS = `id, driver_id AS "driverId", vehicle_id AS "vehicleId",
   ST_Y(dest_geo::geometry) AS "destLat", ST_X(dest_geo::geometry) AS "destLng",
   depart_at AS "departAt", recurring_days AS "recurringDays",
   seats_total AS "seatsTotal", seats_available AS "seatsAvailable",
-  price_per_seat AS "pricePerSeat", vertical, ladies_only AS "ladiesOnly", status, city`;
+  price_per_seat AS "pricePerSeat", vertical, vehicle_type AS "vehicleType",
+  payment_method AS "paymentMethod", ladies_only AS "ladiesOnly", status, city`;
 
 export class PgRideRepository implements RideRepository {
   constructor(private readonly pool: Pool) {}
@@ -102,18 +108,18 @@ export class PgRideRepository implements RideRepository {
       `INSERT INTO rides
          (driver_id, vehicle_id, origin_label, origin_geo, dest_label, dest_geo,
           depart_at, recurring_days, seats_total, seats_available, price_per_seat,
-          vertical, ladies_only, city)
+          vertical, vehicle_type, ladies_only, city)
        VALUES ($1, $2, $3,
           ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography,
           $6,
           ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography,
-          $9, $10, $11, $11, $12, $13, $14, $15)
+          $9, $10, $11, $11, $12, $13, $14, $15, $16)
        RETURNING ${COLS}`,
       [
         r.driverId, r.vehicleId, r.originLabel, r.originLng, r.originLat,
         r.destLabel, r.destLng, r.destLat,
         r.departAt, r.recurringDays, r.seatsTotal, r.pricePerSeat,
-        r.vertical, r.ladiesOnly, r.city
+        r.vertical, r.vehicleType, r.ladiesOnly, r.city
       ]
     );
     return rows[0];
@@ -142,6 +148,10 @@ export class PgRideRepository implements RideRepository {
     if (p.ladiesOnly !== undefined) {
       params.push(p.ladiesOnly);
       sql += ` AND ladies_only = $${params.length}`;
+    }
+    if (p.vehicleType) {
+      params.push(p.vehicleType);
+      sql += ` AND vehicle_type = $${params.length}`;
     }
     if (p.city) {
       params.push(p.city);
@@ -197,6 +207,7 @@ export class InMemoryRideRepository implements RideRepository {
       id: `ride-${String(++this.seq).padStart(4, "0")}`,
       status: "open",
       seatsAvailable: r.seatsTotal,
+      paymentMethod: "cash",
       ...r
     };
     this.items.set(rec.id, rec);
@@ -219,6 +230,7 @@ export class InMemoryRideRepository implements RideRepository {
           distanceM(r.originLat, r.originLng, p.pickupLat, p.pickupLng) <= p.radiusM &&
           distanceM(r.destLat, r.destLng, p.dropLat, p.dropLng) <= p.radiusM &&
           (p.ladiesOnly === undefined || r.ladiesOnly === p.ladiesOnly) &&
+          (!p.vehicleType || r.vehicleType === p.vehicleType) &&
           (!p.city || r.city === p.city)
       )
       .sort((a, b) => a.departAt.localeCompare(b.departAt) || a.id.localeCompare(b.id))

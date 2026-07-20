@@ -22,6 +22,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Hub _drop = lahoreHubs[0]; // Gulberg
   DateTime _day = DateTime.now().add(const Duration(days: 1));
   bool _ladiesOnly = false;
+  String? _vehicleType; // null = any
 
   void _search() {
     context.read<RideSearchBloc>().add(RideSearchSubmitted(
@@ -29,6 +30,7 @@ class _SearchScreenState extends State<SearchScreen> {
           drop: _drop,
           day: _day,
           ladiesOnly: _ladiesOnly,
+          vehicleType: _vehicleType,
         ));
   }
 
@@ -81,7 +83,29 @@ class _SearchScreenState extends State<SearchScreen> {
             }),
             onSearch: _search,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: const Text('All'),
+                  selected: _vehicleType == null,
+                  onSelected: (_) => setState(() => _vehicleType = null),
+                ),
+                for (final type in vehicleTypes) ...[
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    avatar: Icon(vehicleTypeIcon(type), size: 16),
+                    label: Text(vehicleTypeLabel(type)),
+                    selected: _vehicleType == type,
+                    onSelected: (_) => setState(() => _vehicleType = type),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           BlocBuilder<RideSearchBloc, RideSearchState>(
             builder: (context, state) => switch (state) {
               RideSearchInitial() => const EmptyState(
@@ -247,6 +271,32 @@ class _HubDropdown extends StatelessWidget {
   }
 }
 
+class _Meta extends StatelessWidget {
+  const _Meta({required this.icon, required this.text, this.color});
+  final IconData icon;
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color ?? theme.colorScheme.outline),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: color,
+            fontWeight: color != null ? FontWeight.w700 : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _RideCard extends StatelessWidget {
   const _RideCard({required this.ride});
   final Ride ride;
@@ -292,25 +342,24 @@ class _RideCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Icon(Icons.schedule_rounded, size: 16, color: theme.colorScheme.outline),
-                const SizedBox(width: 4),
-                Text(DateFormat('h:mm a').format(ride.departAt),
-                    style: theme.textTheme.labelLarge),
-                const SizedBox(width: 14),
-                Icon(Icons.airline_seat_recline_normal_rounded,
-                    size: 16,
-                    color: seatsLow ? const Color(0xFFB26A00) : theme.colorScheme.outline),
-                const SizedBox(width: 4),
-                Text(
-                  '${ride.seatsAvailable} of ${ride.seatsTotal} seats',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                      color: seatsLow ? const Color(0xFFB26A00) : null,
-                      fontWeight: seatsLow ? FontWeight.w700 : null),
+                _Meta(
+                    icon: vehicleTypeIcon(ride.vehicleType),
+                    text: vehicleTypeLabel(ride.vehicleType)),
+                _Meta(
+                    icon: Icons.schedule_rounded,
+                    text: DateFormat('h:mm a').format(ride.departAt)),
+                _Meta(
+                  icon: Icons.airline_seat_recline_normal_rounded,
+                  text: '${ride.seatsAvailable} of ${ride.seatsTotal} seats',
+                  color: seatsLow ? const Color(0xFFB26A00) : null,
                 ),
-                const Spacer(),
                 if (ride.ladiesOnly) const StatusPill('Ladies only', color: Color(0xFFC2185B)),
+                const StatusPill('Cash', color: Color(0xFF00695C)),
               ],
             ),
             const SizedBox(height: 12),

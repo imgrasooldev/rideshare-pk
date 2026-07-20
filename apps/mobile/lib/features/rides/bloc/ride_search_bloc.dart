@@ -19,15 +19,18 @@ final class RideSearchSubmitted extends RideSearchEvent {
     required this.drop,
     required this.day,
     this.ladiesOnly = false,
+    this.vehicleType,
   });
 
   final Hub pickup;
   final Hub drop;
   final DateTime day;
   final bool ladiesOnly;
+  /// null = any vehicle type.
+  final String? vehicleType;
 
   @override
-  List<Object?> get props => [pickup.label, drop.label, day, ladiesOnly];
+  List<Object?> get props => [pickup.label, drop.label, day, ladiesOnly, vehicleType];
 }
 
 final class RideSearchNextPageRequested extends RideSearchEvent {
@@ -109,6 +112,7 @@ class RideSearchBloc extends Bloc<RideSearchEvent, RideSearchState> {
         departAfter: after,
         departBefore: before,
         ladiesOnly: event.ladiesOnly ? true : null,
+        vehicleType: event.vehicleType,
       );
       emit(RideSearchLoaded(rides: page.items, query: event, nextCursor: page.nextCursor));
     } on ApiException catch (e) {
@@ -128,6 +132,7 @@ class RideSearchBloc extends Bloc<RideSearchEvent, RideSearchState> {
         departAfter: after,
         departBefore: before,
         ladiesOnly: current.query.ladiesOnly ? true : null,
+        vehicleType: current.query.vehicleType,
         cursor: current.nextCursor,
       );
       emit(current.copyWith(

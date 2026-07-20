@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+﻿import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryVehicleRepository } from "../vehicles/vehicles.repo.js";
 import { TrustService } from "./trust.service.js";
@@ -39,7 +39,7 @@ describe("TrustService", () => {
 
   it("vehicle verification requires owning the vehicle and verifies it on approval", async () => {
     const vehicle = await vehicles.create(userId, {
-      make: "Suzuki", model: "Alto", plate: "LEB-1234", seats: 4, docUrls: []
+      vehicleType: "car", make: "Suzuki", model: "Alto", plate: "LEB-1234", seats: 4, docUrls: []
     });
 
     await expect(

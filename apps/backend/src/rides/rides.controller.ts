@@ -22,6 +22,7 @@ const postRideDto = z.object({
   vertical: z
     .enum(["office", "school", "city", "rentacar", "ladies", "parcel", "corporate", "airport", "events"])
     .default("office"),
+  vehicleType: z.enum(["car", "bike", "hiace", "minivan"]).default("car"),
   ladiesOnly: z.boolean().default(false)
 });
 
@@ -37,6 +38,7 @@ const searchDto = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
+  vehicleType: z.enum(["car", "bike", "hiace", "minivan"]).optional(),
   city: z.string().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20)
@@ -66,6 +68,7 @@ export class RidesController {
       departAfter: dto.departAfter,
       departBefore: dto.departBefore,
       ladiesOnly: dto.ladiesOnly,
+      vehicleType: dto.vehicleType,
       city: dto.city,
       cursor: dto.cursor ?? null,
       limit: dto.limit

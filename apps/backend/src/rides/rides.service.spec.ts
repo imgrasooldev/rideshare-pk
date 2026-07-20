@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+﻿import { beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../config/config.js";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryVehicleRepository } from "../vehicles/vehicles.repo.js";
@@ -20,6 +20,7 @@ const baseRide: PostRideInput = {
   pricePerSeat: 250,
   vehicleId: null,
   vertical: "office",
+  vehicleType: "car",
   ladiesOnly: false
 };
 
@@ -39,11 +40,22 @@ describe("RidesService", () => {
     await users.setVerified(driverId, true);
   });
 
-  it("verified driver posts a ride; seats_available = seats_total", async () => {
+  it("verified driver posts a ride; seats_available = seats_total; cash-only", async () => {
     const ride = await service.post(driverId, baseRide);
     expect(ride.status).toBe("open");
     expect(ride.seatsAvailable).toBe(3);
     expect(ride.city).toBe("lahore");
+    expect(ride.paymentMethod).toBe("cash");
+  });
+
+  it("marketplace vehicle types: bike rides carry max 1 passenger", async () => {
+    await expect(
+      service.post(driverId, { ...baseRide, vehicleType: "bike", seatsTotal: 3 })
+    ).rejects.toThrow(/only 1 passenger seat/);
+    const bike = await service.post(driverId, { ...baseRide, vehicleType: "bike", seatsTotal: 1 });
+    expect(bike.vehicleType).toBe("bike");
+    const hiace = await service.post(driverId, { ...baseRide, vehicleType: "hiace", seatsTotal: 12 });
+    expect(hiace.seatsAvailable).toBe(12);
   });
 
   it("blocks unverified drivers when the gate is on", async () => {
@@ -82,7 +94,7 @@ describe("RidesService", () => {
     ).rejects.toThrow(/future/);
 
     const car = await vehicles.create(driverId, {
-      make: "Suzuki", model: "Alto", plate: "LEB-1", seats: 3, docUrls: []
+      vehicleType: "car", make: "Suzuki", model: "Alto", plate: "LEB-1", seats: 3, docUrls: []
     });
     await expect(
       service.post(driverId, { ...baseRide, vehicleId: car.id, seatsTotal: 5 })
@@ -121,6 +133,14 @@ describe("RidesService", () => {
         departBefore: new Date(Date.now() + 2 * 3600 * 1000).toISOString()
       });
       expect(early.items).toHaveLength(0);
+    });
+
+    it("filters by vehicle type", async () => {
+      await service.post(driverId, baseRide);
+      await service.post(driverId, { ...baseRide, vehicleType: "hiace", seatsTotal: 12 });
+      const hiaceOnly = await service.search({ ...nearGulbergToDha, vehicleType: "hiace" });
+      expect(hiaceOnly.items).toHaveLength(1);
+      expect(hiaceOnly.items[0]!.vehicleType).toBe("hiace");
     });
 
     it("filters ladies-only and paginates with a cursor", async () => {

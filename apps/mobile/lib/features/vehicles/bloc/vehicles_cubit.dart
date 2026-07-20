@@ -50,12 +50,14 @@ class VehiclesCubit extends Cubit<VehiclesState> {
     required String model,
     required String plate,
     required int seats,
+    String vehicleType = 'car',
   }) async {
     final current = state;
     final existing = current is VehiclesLoaded ? current.vehicles : <Vehicle>[];
     emit(VehiclesLoaded(existing, adding: true));
     try {
-      final vehicle = await _repo.create(make: make, model: model, plate: plate, seats: seats);
+      final vehicle = await _repo.create(
+          make: make, model: model, plate: plate, seats: seats, vehicleType: vehicleType);
       emit(VehiclesLoaded([...existing, vehicle]));
     } on ApiException catch (e) {
       emit(VehiclesLoaded(existing, error: e.message));

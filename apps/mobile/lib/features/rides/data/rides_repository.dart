@@ -1,5 +1,24 @@
+import 'package:flutter/material.dart';
+
 import '../../../core/network/api_client.dart';
 import 'models/ride.dart';
+
+/// Marketplace vehicle types — anyone can list a car, bike, Hiace, or minivan.
+const vehicleTypes = ['car', 'bike', 'hiace', 'minivan'];
+
+IconData vehicleTypeIcon(String type) => switch (type) {
+      'bike' => Icons.two_wheeler_rounded,
+      'hiace' => Icons.airport_shuttle_rounded,
+      'minivan' => Icons.directions_bus_rounded,
+      _ => Icons.directions_car_rounded,
+    };
+
+String vehicleTypeLabel(String type) => switch (type) {
+      'bike' => 'Bike',
+      'hiace' => 'Hiace',
+      'minivan' => 'Minivan',
+      _ => 'Car',
+    };
 
 /// A named pickup/drop point. MVP uses curated Lahore hubs; the map-based
 /// picker replaces this list without touching blocs (repository pattern).
@@ -33,9 +52,11 @@ class RidesRepository {
     required DateTime departBefore,
     double radiusKm = 3,
     bool? ladiesOnly,
+    String? vehicleType,
     String? cursor,
   }) async {
     final res = await _api.get('/rides/search', query: {
+      'vehicleType': ?vehicleType,
       'pickupLat': pickup.lat,
       'pickupLng': pickup.lng,
       'dropLat': drop.lat,
@@ -58,9 +79,11 @@ class RidesRepository {
     required List<int> recurringDays,
     required int seatsTotal,
     required int pricePerSeat,
+    String vehicleType = 'car',
     bool ladiesOnly = false,
   }) async {
     final res = await _api.post('/rides', body: {
+      'vehicleType': vehicleType,
       'originLabel': origin.label,
       'originLat': origin.lat,
       'originLng': origin.lng,

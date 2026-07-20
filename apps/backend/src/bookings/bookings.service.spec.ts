@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+﻿import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryRideRepository, type RideRecord } from "../rides/rides.repo.js";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryBookingRepository } from "./bookings.repo.js";
@@ -27,6 +27,7 @@ describe("BookingsService", () => {
       seatsTotal: 3,
       pricePerSeat: 250,
       vertical: "office",
+      vehicleType: "car",
       ladiesOnly: false,
       city: "lahore",
       ...overrides
@@ -60,7 +61,7 @@ describe("BookingsService", () => {
     expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
   });
 
-  it("race: N concurrent bookings for limited seats — exactly seats_total win", async () => {
+  it("race: N concurrent bookings for limited seats - exactly seats_total win", async () => {
     const riders = await Promise.all(
       Array.from({ length: 6 }, (_, i) => users.upsertByPhone(`+9230099900${i}${i}`, "lahore"))
     );

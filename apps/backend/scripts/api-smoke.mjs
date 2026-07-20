@@ -74,10 +74,11 @@ try {
   // Vehicle
   const vehicle = await call("POST", "/vehicles", {
     token: t,
-    body: { make: "Suzuki", model: "Alto", plate: "leb-1234", seats: 4, docUrls: [] },
+    body: { vehicleType: "hiace", make: "Toyota", model: "Hiace", plate: "leb-1234", seats: 12, docUrls: [] },
     expectStatus: 201
   });
   if (vehicle.plate !== "LEB-1234") throw new Error("plate not normalised");
+  if (vehicle.vehicleType !== "hiace") throw new Error("vehicle type not stored");
   const mine = await call("GET", "/vehicles/mine", { token: t });
   if (mine.length !== 1) throw new Error("vehicle list wrong");
 
@@ -133,6 +134,19 @@ try {
       }
     });
     if (ride.seatsAvailable !== 3) throw new Error("ride seats wrong");
+    if (ride.paymentMethod !== "cash") throw new Error("ride must be cash-only");
+    if (ride.vehicleType !== "car") throw new Error("default vehicle type wrong");
+
+    // Marketplace: bike rides cap at 1 seat; hiace rides allow many.
+    await call("POST", "/rides", {
+      token: t,
+      expectStatus: 400,
+      body: {
+        originLabel: "Gulberg Liberty Market", originLat: 31.5102, originLng: 74.3441,
+        destLabel: "DHA Phase 5", destLat: 31.4622, destLng: 74.4082,
+        departAt, seatsTotal: 3, pricePerSeat: 100, vehicleType: "bike"
+      }
+    });
 
     const search = await call(
       "GET",

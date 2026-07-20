@@ -35,8 +35,9 @@ CREATE TABLE users (
 );
 
 CREATE TABLE vehicles (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id   uuid NOT NULL REFERENCES users(id),
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id     uuid NOT NULL REFERENCES users(id),
+  vehicle_type text NOT NULL DEFAULT 'car' CHECK (vehicle_type IN ('car','bike','hiace','minivan')),
   make       text NOT NULL,
   model      text NOT NULL,
   plate      text NOT NULL,
@@ -64,6 +65,8 @@ CREATE TABLE rides (
   price_per_seat  integer NOT NULL CHECK (price_per_seat >= 0), -- PKR, cost-share framing
   vertical        text NOT NULL DEFAULT 'office' CHECK (vertical IN
                     ('office','school','city','rentacar','ladies','parcel','corporate','airport','events')),
+  vehicle_type    text NOT NULL DEFAULT 'car' CHECK (vehicle_type IN ('car','bike','hiace','minivan')),
+  payment_method  text NOT NULL DEFAULT 'cash' CHECK (payment_method IN ('cash')), -- cash-only until Phase 2
   ladies_only     boolean NOT NULL DEFAULT false,
   status          text NOT NULL DEFAULT 'open' CHECK (status IN ('open','full','cancelled','completed')),
   city            text NOT NULL DEFAULT 'lahore',

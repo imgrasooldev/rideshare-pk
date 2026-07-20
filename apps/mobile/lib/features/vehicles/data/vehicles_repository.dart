@@ -16,8 +16,10 @@ class VehiclesRepository {
     required String model,
     required String plate,
     required int seats,
+    String vehicleType = 'car',
   }) async {
     final res = await _api.post('/vehicles', body: {
+      'vehicleType': vehicleType,
       'make': make,
       'model': model,
       'plate': plate,

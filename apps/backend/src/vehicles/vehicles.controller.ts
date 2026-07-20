@@ -6,6 +6,7 @@ import { parse } from "../shared/validation.js";
 import type { VehicleRepository } from "./vehicles.repo.js";
 
 const createVehicleDto = z.object({
+  vehicleType: z.enum(["car", "bike", "hiace", "minivan"]).default("car"),
   make: z.string().trim().min(2).max(40),
   model: z.string().trim().min(1).max(40),
   plate: z

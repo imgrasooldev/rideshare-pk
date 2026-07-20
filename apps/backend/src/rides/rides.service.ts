@@ -40,6 +40,10 @@ export class RidesService {
     if (new Date(input.departAt).getTime() <= Date.now()) {
       throw new BadRequestException("departAt must be in the future");
     }
+    // Marketplace reality: a bike carries one passenger.
+    if (input.vehicleType === "bike" && input.seatsTotal > 1) {
+      throw new BadRequestException("A bike ride can offer only 1 passenger seat");
+    }
     if (input.vehicleId) {
       const vehicle = await this.vehicles.findById(input.vehicleId);
       if (!vehicle || vehicle.ownerId !== driverId) {
