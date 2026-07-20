@@ -6,6 +6,9 @@ import { loadConfig } from "./config/config.js";
 async function bootstrap() {
   const config = loadConfig();
   const app = await NestFactory.create(AppModule);
+  // Bearer-token API (no cookies) consumed by the Flutter app and admin web
+  // console from browser origins — CORS open by design.
+  app.enableCors({ origin: true, methods: "GET,POST,PATCH,DELETE,OPTIONS" });
   app.setGlobalPrefix("api/v1", { exclude: ["health"] });
   app.enableShutdownHooks();
   await app.listen(config.PORT);
