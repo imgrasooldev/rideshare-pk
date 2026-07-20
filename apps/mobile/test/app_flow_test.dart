@@ -106,6 +106,71 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
+  testWidgets('email tab: register creates an account and lands on home', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Email'));
+    await tester.pumpAndSettle();
+    expect(find.text('Log in'), findsOneWidget);
+    expect(find.text('Forgot password?'), findsOneWidget);
+
+    // Switch to register, fill the form, submit.
+    await tester.tap(find.text('New here? Create an account'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'sara@example.com');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'supersecret1');
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    expect(auth.registered['sara@example.com'], 'supersecret1');
+    expect(find.text('Find a ride'), findsOneWidget); // authenticated home
+  });
+
+  testWidgets('email login rejects a wrong password with the API error', (tester) async {
+    auth.registered['sara@example.com'] = 'rightpassword1';
+    await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Email'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'sara@example.com');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'wrongwrong1');
+    await tester.tap(find.text('Log in'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Incorrect email or password'), findsOneWidget);
+    expect(find.text('Find a ride'), findsNothing);
+  });
+
+  testWidgets('forgot password flow resets via the dev token', (tester) async {
+    auth.registered['sara@example.com'] = 'oldpassword1';
+    await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Email'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+
+    // .last: the sheet's field sits above the login form's email field.
+    await tester.enterText(find.widgetWithText(TextField, 'Email').last, 'sara@example.com');
+    await tester.tap(find.text('Send reset code'));
+    await tester.pumpAndSettle();
+
+    // Dev token is prefilled; just set the new password.
+    await tester.enterText(
+        find.widgetWithText(TextField, 'New password (min 8 characters)'), 'newpassword9');
+    await tester.tap(find.text('Set new password'));
+    await tester.pumpAndSettle();
+
+    expect(auth.registered['sara@example.com'], 'newpassword9');
+    expect(find.textContaining('Password updated'), findsOneWidget);
+  });
+
   testWidgets('wrong OTP shows the API error and stays on the code step', (tester) async {
     await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
     await tester.pumpAndSettle();

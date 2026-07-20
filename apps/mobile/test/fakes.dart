@@ -38,11 +38,60 @@ class FakeAuthRepository implements AuthRepository {
 
   /// The user returned by a successful OTP verify.
   User loginAs = demoUser;
+  final registered = <String, String>{}; // email -> password
+  String? lastResetToken;
 
   @override
   Future<String?> requestOtp(String phone) async {
     lastOtpPhone = phone;
     return '123456';
+  }
+
+  @override
+  Future<User> register({required String email, required String password, String? name}) async {
+    if (registered.containsKey(email)) {
+      throw const ApiException('An account with this email already exists — log in instead',
+          statusCode: 409);
+    }
+    registered[email] = password;
+    sessionUser = User(
+      id: 'e1',
+      phone: null,
+      email: email,
+      name: name,
+      role: 'rider',
+      verified: false,
+      city: 'lahore',
+    );
+    return sessionUser!;
+  }
+
+  @override
+  Future<User> loginWithEmail(String email, String password) async {
+    if (registered[email] != password) {
+      throw const ApiException('Incorrect email or password', statusCode: 401);
+    }
+    sessionUser = User(
+        id: 'e1', phone: null, email: email, role: 'rider', verified: false, city: 'lahore');
+    return sessionUser!;
+  }
+
+  @override
+  Future<String?> forgotPassword(String email) async {
+    if (!registered.containsKey(email)) return null;
+    lastResetToken = 'reset-token-${email.hashCode.abs()}';
+    return lastResetToken;
+  }
+
+  @override
+  Future<void> resetPassword({required String token, required String password}) async {
+    if (token != lastResetToken) {
+      throw const ApiException('Reset link is invalid or expired — request a new one',
+          statusCode: 400);
+    }
+    final email = registered.keys.first;
+    registered[email] = password;
+    lastResetToken = null;
   }
 
   @override

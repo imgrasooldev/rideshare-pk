@@ -62,10 +62,7 @@ class ProfileScreen extends StatelessWidget {
                       radius: 30,
                       backgroundColor: Colors.white.withValues(alpha: 0.2),
                       child: Text(
-                        (user.name?.isNotEmpty == true
-                                ? user.name![0]
-                                : user.phone.substring(3, 4))
-                            .toUpperCase(),
+                        user.handle[0].toUpperCase(),
                         style: theme.textTheme.headlineSmall?.copyWith(
                             color: Colors.white, fontWeight: FontWeight.w800),
                       ),
@@ -78,7 +75,7 @@ class ProfileScreen extends StatelessWidget {
                           Text(user.name ?? 'Add your name',
                               style: theme.textTheme.titleLarge?.copyWith(
                                   color: Colors.white, fontWeight: FontWeight.w800)),
-                          Text(user.phone,
+                          Text(user.phone ?? user.email ?? 'Add a phone number',
                               style: theme.textTheme.bodySmall
                                   ?.copyWith(color: Colors.white.withValues(alpha: 0.8))),
                         ],

@@ -7,6 +7,7 @@ class User extends Equatable {
     required this.role,
     required this.verified,
     required this.city,
+    this.email,
     this.name,
     this.gender,
     this.cnicMasked,
@@ -14,17 +15,19 @@ class User extends Equatable {
 
   factory User.fromJson(Map<String, dynamic> json) => User(
         id: json['id'] as String,
-        phone: json['phone'] as String,
+        phone: json['phone'] as String?,
         role: json['role'] as String? ?? 'rider',
         verified: json['verified'] as bool? ?? false,
         city: json['city'] as String? ?? '',
+        email: json['email'] as String?,
         name: json['name'] as String?,
         gender: json['gender'] as String?,
         cnicMasked: json['cnicMasked'] as String?,
       );
 
   final String id;
-  final String phone;
+  final String? phone;
+  final String? email;
   final String role;
   final bool verified;
   final String city;
@@ -45,6 +48,9 @@ class User extends Equatable {
 
   bool get isDriver => role == 'driver' || role == 'both';
 
+  /// Best display handle for headers/avatars.
+  String get handle => name ?? phone ?? email ?? 'You';
+
   @override
-  List<Object?> get props => [id, phone, role, verified, city, name, gender, cnicMasked];
+  List<Object?> get props => [id, phone, email, role, verified, city, name, gender, cnicMasked];
 }

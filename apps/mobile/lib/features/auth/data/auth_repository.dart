@@ -32,6 +32,49 @@ class AuthRepository {
     return User.fromJson(user);
   }
 
+  Future<User> register({required String email, required String password, String? name}) async {
+    final res = await _api.post(
+      '/auth/register',
+      body: {'email': email, 'password': password, 'name': ?name},
+      noAuth: true,
+    );
+    return _saveSession(res);
+  }
+
+  Future<User> loginWithEmail(String email, String password) async {
+    final res = await _api.post(
+      '/auth/login',
+      body: {'email': email, 'password': password},
+      noAuth: true,
+    );
+    return _saveSession(res);
+  }
+
+  /// Returns the dev reset token when the backend runs in dev mode
+  /// (null in production, where the link arrives by email).
+  Future<String?> forgotPassword(String email) async {
+    final res = await _api.post('/auth/password/forgot', body: {'email': email}, noAuth: true);
+    return res['devResetToken'] as String?;
+  }
+
+  Future<void> resetPassword({required String token, required String password}) async {
+    await _api.post(
+      '/auth/password/reset',
+      body: {'token': token, 'password': password},
+      noAuth: true,
+    );
+  }
+
+  Future<User> _saveSession(Map<String, dynamic> res) async {
+    final user = res['user'] as Map<String, dynamic>;
+    await _storage.save(
+      accessToken: res['accessToken'] as String,
+      refreshToken: res['refreshToken'] as String,
+      user: user,
+    );
+    return User.fromJson(user);
+  }
+
   /// Restores a persisted session; refreshes the profile when possible.
   Future<User?> restoreSession() async {
     final cached = await _storage.user;

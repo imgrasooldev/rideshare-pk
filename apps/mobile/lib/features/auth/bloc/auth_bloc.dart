@@ -32,6 +32,23 @@ final class AuthOtpSubmitted extends AuthEvent {
   List<Object?> get props => [code];
 }
 
+final class AuthEmailLoginSubmitted extends AuthEvent {
+  const AuthEmailLoginSubmitted(this.email, this.password);
+  final String email;
+  final String password;
+  @override
+  List<Object?> get props => [email, password];
+}
+
+final class AuthRegisterSubmitted extends AuthEvent {
+  const AuthRegisterSubmitted({required this.email, required this.password, this.name});
+  final String email;
+  final String password;
+  final String? name;
+  @override
+  List<Object?> get props => [email, password, name];
+}
+
 final class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }
@@ -103,6 +120,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthStarted>(_onStarted);
     on<AuthOtpRequested>(_onOtpRequested);
     on<AuthOtpSubmitted>(_onOtpSubmitted);
+    on<AuthEmailLoginSubmitted>(_onEmailLogin);
+    on<AuthRegisterSubmitted>(_onRegister);
     on<AuthLogoutRequested>(_onLogout);
     on<AuthProfileRefreshed>((event, emit) => emit(AuthAuthenticated(event.user)));
   }
@@ -133,6 +152,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthAuthenticated(user));
     } on ApiException catch (e) {
       emit(current.copyWith(submitting: false, error: e.message));
+    }
+  }
+
+  Future<void> _onEmailLogin(AuthEmailLoginSubmitted event, Emitter<AuthState> emit) async {
+    emit(const AuthUnauthenticated(submitting: true));
+    try {
+      emit(AuthAuthenticated(await _repo.loginWithEmail(event.email, event.password)));
+    } on ApiException catch (e) {
+      emit(AuthUnauthenticated(error: e.message));
+    }
+  }
+
+  Future<void> _onRegister(AuthRegisterSubmitted event, Emitter<AuthState> emit) async {
+    emit(const AuthUnauthenticated(submitting: true));
+    try {
+      emit(AuthAuthenticated(
+        await _repo.register(email: event.email, password: event.password, name: event.name),
+      ));
+    } on ApiException catch (e) {
+      emit(AuthUnauthenticated(error: e.message));
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/auth_bloc.dart';
+import 'forgot_password_sheet.dart';
 
 /// Two-step OTP login on a branded gradient backdrop. The step is derived
 /// from AuthState — no local navigation state to drift out of sync.
@@ -43,7 +44,7 @@ class LoginScreen extends StatelessWidget {
                             curve: Curves.easeOut,
                             child: switch (state) {
                               AuthCodeSent() => _OtpStep(state: state),
-                              AuthUnauthenticated() => _PhoneStep(state: state),
+                              AuthUnauthenticated() => _AuthMethods(state: state),
                               _ => const Padding(
                                   padding: EdgeInsets.all(24),
                                   child: Center(child: CircularProgressIndicator()),
@@ -100,6 +101,173 @@ class _Brand extends StatelessWidget {
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: onPrimary.withValues(alpha: 0.85))),
       ],
+    );
+  }
+}
+
+enum _Method { phone, email }
+
+class _AuthMethods extends StatefulWidget {
+  const _AuthMethods({required this.state});
+  final AuthUnauthenticated state;
+
+  @override
+  State<_AuthMethods> createState() => _AuthMethodsState();
+}
+
+class _AuthMethodsState extends State<_AuthMethods> {
+  _Method _method = _Method.phone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<_Method>(
+          segments: const [
+            ButtonSegment(
+                value: _Method.phone,
+                icon: Icon(Icons.phone_android, size: 18),
+                label: Text('Phone')),
+            ButtonSegment(
+                value: _Method.email,
+                icon: Icon(Icons.alternate_email, size: 18),
+                label: Text('Email')),
+          ],
+          selected: {_method},
+          onSelectionChanged: (s) => setState(() => _method = s.first),
+        ),
+        const SizedBox(height: 20),
+        if (_method == _Method.phone)
+          _PhoneStep(state: widget.state)
+        else
+          _EmailStep(state: widget.state),
+      ],
+    );
+  }
+}
+
+class _EmailStep extends StatefulWidget {
+  const _EmailStep({required this.state});
+  final AuthUnauthenticated state;
+
+  @override
+  State<_EmailStep> createState() => _EmailStepState();
+}
+
+class _EmailStepState extends State<_EmailStep> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _register = false;
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    final bloc = context.read<AuthBloc>();
+    if (_register) {
+      bloc.add(AuthRegisterSubmitted(
+        email: _email.text.trim(),
+        password: _password.text,
+        name: _name.text.trim().isEmpty ? null : _name.text.trim(),
+      ));
+    } else {
+      bloc.add(AuthEmailLoginSubmitted(_email.text.trim(), _password.text));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_register) ...[
+            TextFormField(
+              controller: _name,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Full name (optional)',
+                prefixIcon: Icon(Icons.person_outline),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          TextFormField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              prefixIcon: Icon(Icons.alternate_email),
+            ),
+            validator: (v) =>
+                RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch((v ?? '').trim())
+                    ? null
+                    : 'Enter a valid email address',
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _password,
+            obscureText: _obscure,
+            autofillHints: const [AutofillHints.password],
+            decoration: InputDecoration(
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _obscure = !_obscure),
+                icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, size: 20),
+              ),
+            ),
+            validator: (v) => (_register && (v ?? '').length < 8)
+                ? 'At least 8 characters'
+                : (v ?? '').isEmpty
+                    ? 'Enter your password'
+                    : null,
+            onFieldSubmitted: (_) => _submit(),
+          ),
+          if (!_register)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => showForgotPasswordSheet(context),
+                child: const Text('Forgot password?'),
+              ),
+            ),
+          if (widget.state.error != null) ...[
+            const SizedBox(height: 8),
+            Text(widget.state.error!,
+                style: TextStyle(color: theme.colorScheme.error), textAlign: TextAlign.center),
+          ],
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: widget.state.submitting ? null : _submit,
+            child: widget.state.submitting
+                ? const SizedBox.square(
+                    dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(_register ? 'Create account' : 'Log in'),
+          ),
+          TextButton(
+            onPressed: () => setState(() => _register = !_register),
+            child: Text(_register
+                ? 'Already have an account? Log in'
+                : 'New here? Create an account'),
+          ),
+        ],
+      ),
     );
   }
 }
