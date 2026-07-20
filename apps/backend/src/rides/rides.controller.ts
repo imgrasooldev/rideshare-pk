@@ -72,6 +72,13 @@ export class RidesController {
     });
   }
 
+  @Get("mine")
+  @UseGuards(JwtAuthGuard)
+  mine(@Req() req: AuthedRequest, @Query("cursor") cursor?: string, @Query("limit") limit?: string) {
+    const n = Math.min(Math.max(Number(limit) || 20, 1), 50);
+    return this.rides.myRides(req.user.sub, cursor ?? null, n);
+  }
+
   @Get(":id")
   @UseGuards(JwtAuthGuard)
   get(@Param("id") id: string) {

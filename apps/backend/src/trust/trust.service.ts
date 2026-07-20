@@ -38,6 +38,10 @@ export class TrustService {
     return this.verifications.listPending(cursor, limit);
   }
 
+  listMine(userId: string): Promise<VerificationRecord[]> {
+    return this.verifications.listByUser(userId, 20);
+  }
+
   /**
    * Approve/reject. Approval side-effects: cnic → user gains the verified
    * badge; vehicle → that vehicle is marked verified. A verification can be

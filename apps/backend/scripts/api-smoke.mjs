@@ -89,6 +89,12 @@ try {
   });
   if (ver.status !== "pending") throw new Error("verification should be pending");
 
+  // Own submissions are visible and pending.
+  const myVers = await call("GET", "/verifications/mine", { token: t });
+  if (myVers[0]?.id !== ver.id || myVers[0]?.status !== "pending") {
+    throw new Error("verifications/mine wrong");
+  }
+
   // Admin queue is locked down
   await call("GET", "/admin/verifications", { token: t, expectStatus: 403 });
 
@@ -140,6 +146,9 @@ try {
     }
     const got = await call("GET", `/rides/${ride.id}`, { token: t });
     if (got.originLabel !== "Gulberg Liberty Market") throw new Error("get ride wrong");
+
+    const myRides = await call("GET", "/rides/mine", { token: t });
+    if (!myRides.items.some((r) => r.id === ride.id)) throw new Error("rides/mine missing ride");
 
     // THE RACE: 4 riders fire concurrently at the 3-seat ride. Exactly 3 must
     // win — the conditional UPDATE in the booking transaction is the referee.

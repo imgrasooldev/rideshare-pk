@@ -62,4 +62,8 @@ export class RidesService {
   search(params: RideSearch): Promise<RidePage> {
     return this.rides.search(params);
   }
+
+  myRides(driverId: string, cursor: string | null, limit: number): Promise<RidePage> {
+    return this.rides.listByDriver(driverId, cursor, limit);
+  }
 }

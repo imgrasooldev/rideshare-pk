@@ -24,6 +24,8 @@ export interface PendingPage {
 export interface VerificationRepository {
   create(userId: string, type: VerificationType, docUrl: string, vehicleId: string | null): Promise<VerificationRecord>;
   findById(id: string): Promise<VerificationRecord | null>;
+  /** A user's own submissions, newest first (bounded — no pagination needed). */
+  listByUser(userId: string, limit: number): Promise<VerificationRecord[]>;
   /** FIFO review queue, keyset-paginated on (created_at, id). */
   listPending(cursor: string | null, limit: number): Promise<PendingPage>;
   review(id: string, status: Exclude<VerificationStatus, "pending">, reviewerId: string, notes: string | null): Promise<VerificationRecord | null>;
@@ -61,6 +63,14 @@ export class PgVerificationRepository implements VerificationRepository {
   async findById(id: string): Promise<VerificationRecord | null> {
     const { rows } = await this.pool.query(`SELECT ${COLS} FROM verifications WHERE id = $1`, [id]);
     return rows[0] ?? null;
+  }
+
+  async listByUser(userId: string, limit: number): Promise<VerificationRecord[]> {
+    const { rows } = await this.pool.query(
+      `SELECT ${COLS} FROM verifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+      [userId, limit]
+    );
+    return rows;
   }
 
   async listPending(cursor: string | null, limit: number): Promise<PendingPage> {
@@ -112,6 +122,13 @@ export class InMemoryVerificationRepository implements VerificationRepository {
 
   async findById(id: string): Promise<VerificationRecord | null> {
     return this.items.get(id) ?? null;
+  }
+
+  async listByUser(userId: string, limit: number): Promise<VerificationRecord[]> {
+    return [...this.items.values()]
+      .filter((v) => v.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
   }
 
   async listPending(cursor: string | null, limit: number): Promise<PendingPage> {

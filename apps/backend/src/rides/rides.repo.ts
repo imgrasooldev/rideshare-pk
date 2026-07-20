@@ -68,6 +68,8 @@ export interface RideRepository {
   findById(id: string): Promise<RideRecord | null>;
   /** Geo-corridor + time-window search. MUST be index-backed in SQL (rule 3). */
   search(params: RideSearch): Promise<RidePage>;
+  /** Driver's own rides, newest departure first. */
+  listByDriver(driverId: string, cursor: string | null, limit: number): Promise<RidePage>;
 }
 
 function encodeCursor(r: RideRecord): string {
@@ -156,6 +158,23 @@ export class PgRideRepository implements RideRepository {
     const nextCursor = rows.length > p.limit ? encodeCursor(items[items.length - 1]) : null;
     return { items, nextCursor };
   }
+
+  async listByDriver(driverId: string, cursor: string | null, limit: number): Promise<RidePage> {
+    const after = cursor ? decodeCursor(cursor) : null;
+    const params: unknown[] = [driverId, limit + 1];
+    let where = `driver_id = $1`;
+    if (after) {
+      params.push(after.departAt, after.id);
+      where += ` AND (depart_at, id) < ($3::timestamptz, $4::uuid)`;
+    }
+    const { rows } = await this.pool.query(
+      `SELECT ${COLS} FROM rides WHERE ${where} ORDER BY depart_at DESC, id DESC LIMIT $2`,
+      params
+    );
+    const items = rows.slice(0, limit);
+    const nextCursor = rows.length > limit ? encodeCursor(items[items.length - 1]) : null;
+    return { items, nextCursor };
+  }
 }
 
 /** Haversine metres — mirrors ST_DWithin semantics closely enough for dev. */
@@ -210,6 +229,21 @@ export class InMemoryRideRepository implements RideRepository {
       });
     const items = all.slice(0, p.limit);
     const nextCursor = all.length > p.limit ? encodeCursor(items[items.length - 1]!) : null;
+    return { items, nextCursor };
+  }
+
+  async listByDriver(driverId: string, cursor: string | null, limit: number): Promise<RidePage> {
+    const after = cursor ? decodeCursor(cursor) : null;
+    const all = [...this.items.values()]
+      .filter((r) => r.driverId === driverId)
+      .sort((a, b) => b.departAt.localeCompare(a.departAt) || b.id.localeCompare(a.id))
+      .filter((r) => {
+        if (!after) return true;
+        const cmp = new Date(r.departAt).toISOString().localeCompare(after.departAt);
+        return cmp < 0 || (cmp === 0 && r.id.localeCompare(after.id) < 0);
+      });
+    const items = all.slice(0, limit);
+    const nextCursor = all.length > limit ? encodeCursor(items[items.length - 1]!) : null;
     return { items, nextCursor };
   }
 }

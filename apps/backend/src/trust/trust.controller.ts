@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import { JwtAuthGuard, type AuthedRequest } from "../auth/jwt-auth.guard.js";
 import { parse } from "../shared/validation.js";
@@ -19,5 +19,10 @@ export class TrustController {
   submit(@Req() req: AuthedRequest, @Body() body: unknown) {
     const dto = parse(submitDto, body);
     return this.trust.submit(req.user.sub, dto.type, dto.docUrl, dto.vehicleId);
+  }
+
+  @Get("mine")
+  mine(@Req() req: AuthedRequest) {
+    return this.trust.listMine(req.user.sub);
   }
 }
