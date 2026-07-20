@@ -15,6 +15,7 @@ import 'features/driver/bloc/post_ride_cubit.dart';
 import 'features/profile/bloc/profile_cubit.dart';
 import 'features/rides/bloc/ride_search_bloc.dart';
 import 'features/rides/data/rides_repository.dart';
+import 'features/tracking/data/tracking_repository.dart';
 import 'features/trust/bloc/verifications_cubit.dart';
 import 'features/trust/data/trust_repository.dart';
 import 'features/vehicles/bloc/vehicles_cubit.dart';
@@ -39,6 +40,7 @@ void main() {
         RepositoryProvider(create: (_) => BookingsRepository(api)),
         RepositoryProvider(create: (_) => VehiclesRepository(api)),
         RepositoryProvider(create: (_) => TrustRepository(api)),
+        RepositoryProvider(create: (_) => TrackingRepository(api, storage)),
       ],
       child: MultiBlocProvider(
         providers: [

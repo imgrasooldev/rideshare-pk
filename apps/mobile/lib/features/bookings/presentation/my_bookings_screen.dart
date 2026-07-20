@@ -5,6 +5,8 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
+import '../../rides/data/rides_repository.dart';
+import '../../tracking/presentation/live_trip_screen.dart';
 import '../bloc/my_bookings_bloc.dart';
 import '../data/models/booking.dart';
 
@@ -91,18 +93,38 @@ class _BookingCard extends StatelessWidget {
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
             ),
             if (booking.isActive) ...[
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-                  onPressed: cancelling
-                      ? null
-                      : () => context
-                          .read<MyBookingsBloc>()
-                          .add(BookingCancelPressed(booking.id)),
-                  child: Text(cancelling ? 'Cancelling…' : 'Cancel booking'),
-                ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () async {
+                        final ride = await context
+                            .read<RidesRepository>()
+                            .getById(booking.rideId);
+                        if (context.mounted) {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  LiveTripPage(mode: LiveTripMode.viewer, ride: ride),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.my_location_rounded, size: 18),
+                      label: const Text('Track ride'),
+                    ),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                    onPressed: cancelling
+                        ? null
+                        : () => context
+                            .read<MyBookingsBloc>()
+                            .add(BookingCancelPressed(booking.id)),
+                    child: Text(cancelling ? 'Cancelling…' : 'Cancel booking'),
+                  ),
+                ],
               ),
             ],
           ],

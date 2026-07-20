@@ -13,6 +13,10 @@ class Ride extends Equatable {
     required this.ladiesOnly,
     required this.status,
     required this.city,
+    this.originLat = 0,
+    this.originLng = 0,
+    this.destLat = 0,
+    this.destLng = 0,
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) => Ride(
@@ -27,6 +31,10 @@ class Ride extends Equatable {
         ladiesOnly: json['ladiesOnly'] as bool? ?? false,
         status: json['status'] as String,
         city: json['city'] as String? ?? '',
+        originLat: (json['originLat'] as num?)?.toDouble() ?? 0,
+        originLng: (json['originLng'] as num?)?.toDouble() ?? 0,
+        destLat: (json['destLat'] as num?)?.toDouble() ?? 0,
+        destLng: (json['destLng'] as num?)?.toDouble() ?? 0,
       );
 
   final String id;
@@ -40,10 +48,16 @@ class Ride extends Equatable {
   final bool ladiesOnly;
   final String status;
   final String city;
+  final double originLat;
+  final double originLng;
+  final double destLat;
+  final double destLng;
 
   @override
-  List<Object?> get props =>
-      [id, driverId, originLabel, destLabel, departAt, seatsTotal, seatsAvailable, pricePerSeat, ladiesOnly, status, city];
+  List<Object?> get props => [
+        id, driverId, originLabel, destLabel, departAt, seatsTotal, seatsAvailable,
+        pricePerSeat, ladiesOnly, status, city, originLat, originLng, destLat, destLng
+      ];
 }
 
 class RidePage extends Equatable {

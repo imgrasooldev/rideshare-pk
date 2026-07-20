@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
+import '../../tracking/presentation/live_trip_screen.dart';
 import '../bloc/my_rides_cubit.dart';
 import 'post_ride_screen.dart';
 
@@ -72,6 +73,22 @@ class DriveScreen extends StatelessWidget {
                             style: theme.textTheme.bodyMedium
                                 ?.copyWith(color: theme.colorScheme.outline),
                           ),
+                          if (ride.status == 'open' || ride.status == 'full') ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.tonalIcon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => LiveTripPage(
+                                        mode: LiveTripMode.driver, ride: ride),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                                label: const Text('Start trip'),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
