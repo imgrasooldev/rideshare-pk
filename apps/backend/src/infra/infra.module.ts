@@ -3,8 +3,17 @@ import { Pool } from "pg";
 import { loadConfig, type AppConfig } from "../config/config.js";
 import { InMemoryKvStore } from "../shared/kv.js";
 import { RedisKvStore } from "../shared/redis-kv.js";
-import { APP_CONFIG, KV_STORE, PG_POOL, USER_REPOSITORY } from "../shared/tokens.js";
+import {
+  APP_CONFIG,
+  KV_STORE,
+  PG_POOL,
+  USER_REPOSITORY,
+  VEHICLE_REPOSITORY,
+  VERIFICATION_REPOSITORY
+} from "../shared/tokens.js";
+import { InMemoryVerificationRepository, PgVerificationRepository } from "../trust/verifications.repo.js";
 import { InMemoryUserRepository, PgUserRepository } from "../users/users.repo.js";
+import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehicles.repo.js";
 
 // Central wiring: real drivers when URLs are configured, in-memory fallbacks
 // for zero-infra local dev. Production must always set both URLs.
@@ -35,8 +44,20 @@ import { InMemoryUserRepository, PgUserRepository } from "../users/users.repo.js
         console.warn("DATABASE_URL not set — using in-memory user store (dev only)");
         return new InMemoryUserRepository();
       }
+    },
+    {
+      provide: VEHICLE_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgVehicleRepository(pool) : new InMemoryVehicleRepository()
+    },
+    {
+      provide: VERIFICATION_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgVerificationRepository(pool) : new InMemoryVerificationRepository()
     }
   ],
-  exports: [APP_CONFIG, KV_STORE, PG_POOL, USER_REPOSITORY]
+  exports: [APP_CONFIG, KV_STORE, PG_POOL, USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY]
 })
 export class InfraModule {}

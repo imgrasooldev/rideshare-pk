@@ -23,6 +23,7 @@ CREATE TABLE users (
   gender        text CHECK (gender IN ('female','male','other')), -- required for ladies-only matching
   cnic          text,                           -- encrypted at rest at the app layer
   verified      boolean NOT NULL DEFAULT false,
+  is_admin      boolean NOT NULL DEFAULT false,
   rating_avg    numeric(3,2) NOT NULL DEFAULT 0,
   rating_count  integer NOT NULL DEFAULT 0,
   city          text NOT NULL DEFAULT 'lahore',
@@ -120,6 +121,7 @@ CREATE TABLE verifications (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     uuid NOT NULL REFERENCES users(id),
   type        text NOT NULL CHECK (type IN ('cnic','license','vehicle')),
+  vehicle_id  uuid REFERENCES vehicles(id),  -- set when type = 'vehicle'
   doc_url     text NOT NULL,
   status      text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
   reviewer_id uuid REFERENCES users(id),

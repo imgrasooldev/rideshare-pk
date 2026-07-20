@@ -1,14 +1,24 @@
 import type { Pool } from "pg";
 
-// Minimal user shape auth needs. The users module grows in build step 3;
-// other modules must go through this interface, never the table.
+// Other modules must go through this interface, never the users table.
 export interface UserRecord {
   id: string;
   phone: string;
   name: string | null;
   role: "driver" | "rider" | "both";
+  gender: "female" | "male" | "other" | null;
+  /** Encrypted at rest (AES-GCM) — never expose raw; mask via UsersService. */
+  cnic: string | null;
   verified: boolean;
+  isAdmin: boolean;
   city: string;
+}
+
+export interface ProfilePatch {
+  name?: string;
+  role?: UserRecord["role"];
+  gender?: NonNullable<UserRecord["gender"]>;
+  cnic?: string; // already encrypted by the service layer
 }
 
 export interface UserRepository {
@@ -16,9 +26,12 @@ export interface UserRepository {
   findByPhone(phone: string): Promise<UserRecord | null>;
   /** Returns the existing user for this phone, or creates a rider profile. */
   upsertByPhone(phone: string, city: string): Promise<UserRecord>;
+  updateProfile(id: string, patch: ProfilePatch): Promise<UserRecord | null>;
+  setVerified(id: string, verified: boolean): Promise<void>;
+  setAdmin(id: string, isAdmin: boolean): Promise<void>;
 }
 
-const COLS = "id, phone, name, role, verified, city";
+const COLS = `id, phone, name, role, gender, cnic, verified, is_admin AS "isAdmin", city`;
 
 export class PgUserRepository implements UserRepository {
   constructor(private readonly pool: Pool) {}
@@ -48,6 +61,35 @@ export class PgUserRepository implements UserRepository {
     );
     return rows[0];
   }
+
+  async updateProfile(id: string, patch: ProfilePatch): Promise<UserRecord | null> {
+    const { rows } = await this.pool.query(
+      `UPDATE users SET
+         name = COALESCE($2, name),
+         role = COALESCE($3, role),
+         gender = COALESCE($4, gender),
+         cnic = COALESCE($5, cnic),
+         updated_at = now()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING ${COLS}`,
+      [id, patch.name ?? null, patch.role ?? null, patch.gender ?? null, patch.cnic ?? null]
+    );
+    return rows[0] ?? null;
+  }
+
+  async setVerified(id: string, verified: boolean): Promise<void> {
+    await this.pool.query(`UPDATE users SET verified = $2, updated_at = now() WHERE id = $1`, [
+      id,
+      verified
+    ]);
+  }
+
+  async setAdmin(id: string, isAdmin: boolean): Promise<void> {
+    await this.pool.query(`UPDATE users SET is_admin = $2, updated_at = now() WHERE id = $1`, [
+      id,
+      isAdmin
+    ]);
+  }
 }
 
 export class InMemoryUserRepository implements UserRepository {
@@ -71,10 +113,33 @@ export class InMemoryUserRepository implements UserRepository {
       phone,
       name: null,
       role: "rider",
+      gender: null,
+      cnic: null,
       verified: false,
+      isAdmin: false,
       city
     };
     this.byPhone.set(phone, user);
     return user;
+  }
+
+  async updateProfile(id: string, patch: ProfilePatch): Promise<UserRecord | null> {
+    const user = await this.findById(id);
+    if (!user) return null;
+    if (patch.name !== undefined) user.name = patch.name;
+    if (patch.role !== undefined) user.role = patch.role;
+    if (patch.gender !== undefined) user.gender = patch.gender;
+    if (patch.cnic !== undefined) user.cnic = patch.cnic;
+    return user;
+  }
+
+  async setVerified(id: string, verified: boolean): Promise<void> {
+    const user = await this.findById(id);
+    if (user) user.verified = verified;
+  }
+
+  async setAdmin(id: string, isAdmin: boolean): Promise<void> {
+    const user = await this.findById(id);
+    if (user) user.isAdmin = isAdmin;
   }
 }

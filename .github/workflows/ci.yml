@@ -45,3 +45,6 @@ jobs:
       - name: Auth smoke against real Postgres + Redis
         working-directory: apps/backend
         run: node scripts/auth-smoke.mjs
+      - name: API smoke (profile, vehicles, verification queue, admin review)
+        working-directory: apps/backend
+        run: node scripts/api-smoke.mjs

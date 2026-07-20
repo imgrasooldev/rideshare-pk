@@ -15,6 +15,8 @@ const envSchema = z.object({
   JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
   JWT_REFRESH_TTL: z.coerce.number().int().positive().default(2_592_000),
 
+  CNIC_ENC_KEY: z.string().default("dev-only-cnic-key"),
+
   OTP_TTL: z.coerce.number().int().positive().default(300),
   OTP_MAX_REQUESTS_PER_HOUR: z.coerce.number().int().positive().default(3),
   OTP_DEV_MODE: z.coerce.boolean().default(true),
