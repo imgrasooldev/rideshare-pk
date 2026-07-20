@@ -114,9 +114,47 @@ try {
 
     const meAfter = await call("GET", "/me", { token: t });
     if (meAfter.verified !== true) throw new Error("verified badge not set after approval");
-    console.log("API SMOKE OK (with admin review flow against real DB)");
+
+    // Now verified — post a ride (Gulberg → DHA 5) and find it via geo search.
+    const departAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+    const ride = await call("POST", "/rides", {
+      token: t,
+      expectStatus: 201,
+      body: {
+        originLabel: "Gulberg Liberty Market", originLat: 31.5102, originLng: 74.3441,
+        destLabel: "DHA Phase 5", destLat: 31.4622, destLng: 74.4082,
+        departAt, recurringDays: [1, 2, 3, 4, 5], seatsTotal: 3, pricePerSeat: 250
+      }
+    });
+    if (ride.seatsAvailable !== 3) throw new Error("ride seats wrong");
+
+    const search = await call(
+      "GET",
+      `/rides/search?pickupLat=31.515&pickupLng=74.35&dropLat=31.465&dropLng=74.405&radiusKm=3` +
+        `&departAfter=${encodeURIComponent(new Date(Date.now() + 12 * 3600 * 1000).toISOString())}` +
+        `&departBefore=${encodeURIComponent(new Date(Date.now() + 36 * 3600 * 1000).toISOString())}`,
+      { token: t }
+    );
+    if (!search.items.some((r) => r.id === ride.id)) {
+      throw new Error("posted ride not found by geo search");
+    }
+    const got = await call("GET", `/rides/${ride.id}`, { token: t });
+    if (got.originLabel !== "Gulberg Liberty Market") throw new Error("get ride wrong");
+
+    console.log("API SMOKE OK (admin review + ride post/search against real DB)");
   } else {
-    console.log("API SMOKE OK (in-memory; admin review flow needs DATABASE_URL)");
+    // In-memory mode can't flip admin — but the driver-verification gate must hold.
+    await call("POST", "/rides", {
+      token: t,
+      expectStatus: 403,
+      body: {
+        originLabel: "Gulberg", originLat: 31.51, originLng: 74.34,
+        destLabel: "DHA", destLat: 31.46, destLng: 74.41,
+        departAt: new Date(Date.now() + 3600_000).toISOString(),
+        seatsTotal: 3, pricePerSeat: 200
+      }
+    });
+    console.log("API SMOKE OK (in-memory; admin+ride flow needs DATABASE_URL)");
   }
 
   shutdown(0);

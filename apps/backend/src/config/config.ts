@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+// z.coerce.boolean() would treat "false" as true (non-empty string); env
+// booleans need real string semantics.
+const envBool = (def: boolean) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? !["false", "0", "no", "off", ""].includes(v.toLowerCase()) : v),
+    z.boolean().default(def)
+  );
+
 // Every runtime knob lives here (rule 9: config over code). Fail fast on boot
 // if the environment is malformed rather than at first use.
 const envSchema = z.object({
@@ -19,15 +27,15 @@ const envSchema = z.object({
 
   OTP_TTL: z.coerce.number().int().positive().default(300),
   OTP_MAX_REQUESTS_PER_HOUR: z.coerce.number().int().positive().default(3),
-  OTP_DEV_MODE: z.coerce.boolean().default(true),
+  OTP_DEV_MODE: envBool(true),
 
   MAPS_PROVIDER: z.enum(["osm", "google"]).default("osm"),
   CITY_DEFAULT: z.string().default("lahore"),
 
-  FEATURE_BOOKING_ACCEPT_DECLINE: z.coerce.boolean().default(false),
-  FEATURE_PAYMENTS: z.coerce.boolean().default(false),
-  FEATURE_LADIES_ONLY: z.coerce.boolean().default(true),
-  REQUIRE_DRIVER_VERIFICATION_TO_POST: z.coerce.boolean().default(true),
+  FEATURE_BOOKING_ACCEPT_DECLINE: envBool(false),
+  FEATURE_PAYMENTS: envBool(false),
+  FEATURE_LADIES_ONLY: envBool(true),
+  REQUIRE_DRIVER_VERIFICATION_TO_POST: envBool(true),
   BOOKING_FEE_PKR: z.coerce.number().int().min(0).default(0),
 
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info")
