@@ -9,7 +9,7 @@ async function bootstrap() {
   // Bearer-token API (no cookies) consumed by the Flutter app and admin web
   // console from browser origins — CORS open by design.
   app.enableCors({ origin: true, methods: "GET,POST,PATCH,DELETE,OPTIONS" });
-  app.setGlobalPrefix("api/v1", { exclude: ["health"] });
+  app.setGlobalPrefix("api/v1", { exclude: ["health", "health/ready"] });
   app.enableShutdownHooks();
   await app.listen(config.PORT);
   console.log(JSON.stringify({ level: "info", msg: "backend listening", port: config.PORT }));
