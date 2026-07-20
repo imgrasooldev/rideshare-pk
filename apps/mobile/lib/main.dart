@@ -10,8 +10,15 @@ import 'features/auth/data/auth_repository.dart';
 import 'features/bookings/bloc/booking_action_cubit.dart';
 import 'features/bookings/bloc/my_bookings_bloc.dart';
 import 'features/bookings/data/bookings_repository.dart';
+import 'features/driver/bloc/my_rides_cubit.dart';
+import 'features/driver/bloc/post_ride_cubit.dart';
+import 'features/profile/bloc/profile_cubit.dart';
 import 'features/rides/bloc/ride_search_bloc.dart';
 import 'features/rides/data/rides_repository.dart';
+import 'features/trust/bloc/verifications_cubit.dart';
+import 'features/trust/data/trust_repository.dart';
+import 'features/vehicles/bloc/vehicles_cubit.dart';
+import 'features/vehicles/data/vehicles_repository.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +37,8 @@ void main() {
         RepositoryProvider.value(value: authRepository),
         RepositoryProvider(create: (_) => RidesRepository(api)),
         RepositoryProvider(create: (_) => BookingsRepository(api)),
+        RepositoryProvider(create: (_) => VehiclesRepository(api)),
+        RepositoryProvider(create: (_) => TrustRepository(api)),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -44,6 +53,11 @@ void main() {
           BlocProvider(create: (context) => RideSearchBloc(context.read<RidesRepository>())),
           BlocProvider(create: (context) => MyBookingsBloc(context.read<BookingsRepository>())),
           BlocProvider(create: (context) => BookingActionCubit(context.read<BookingsRepository>())),
+          BlocProvider(create: (context) => MyRidesCubit(context.read<RidesRepository>())),
+          BlocProvider(create: (context) => PostRideCubit(context.read<RidesRepository>())),
+          BlocProvider(create: (context) => ProfileCubit(context.read<AuthRepository>())),
+          BlocProvider(create: (context) => VehiclesCubit(context.read<VehiclesRepository>())),
+          BlocProvider(create: (context) => VerificationsCubit(context.read<TrustRepository>())),
         ],
         child: const RideshareApp(),
       ),

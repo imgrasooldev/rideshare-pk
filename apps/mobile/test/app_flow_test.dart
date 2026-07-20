@@ -7,8 +7,15 @@ import 'package:rideshare_mobile/features/auth/data/auth_repository.dart';
 import 'package:rideshare_mobile/features/bookings/bloc/booking_action_cubit.dart';
 import 'package:rideshare_mobile/features/bookings/bloc/my_bookings_bloc.dart';
 import 'package:rideshare_mobile/features/bookings/data/bookings_repository.dart';
+import 'package:rideshare_mobile/features/driver/bloc/my_rides_cubit.dart';
+import 'package:rideshare_mobile/features/driver/bloc/post_ride_cubit.dart';
+import 'package:rideshare_mobile/features/profile/bloc/profile_cubit.dart';
 import 'package:rideshare_mobile/features/rides/bloc/ride_search_bloc.dart';
 import 'package:rideshare_mobile/features/rides/data/rides_repository.dart';
+import 'package:rideshare_mobile/features/trust/bloc/verifications_cubit.dart';
+import 'package:rideshare_mobile/features/trust/data/trust_repository.dart';
+import 'package:rideshare_mobile/features/vehicles/bloc/vehicles_cubit.dart';
+import 'package:rideshare_mobile/features/vehicles/data/vehicles_repository.dart';
 
 import 'fakes.dart';
 
@@ -16,12 +23,18 @@ Widget buildApp({
   required FakeAuthRepository auth,
   required FakeRidesRepository rides,
   required FakeBookingsRepository bookings,
+  FakeVehiclesRepository? vehicles,
+  FakeTrustRepository? trust,
 }) {
+  final vehiclesRepo = vehicles ?? FakeVehiclesRepository();
+  final trustRepo = trust ?? FakeTrustRepository();
   return MultiRepositoryProvider(
     providers: [
       RepositoryProvider<AuthRepository>.value(value: auth),
       RepositoryProvider<RidesRepository>.value(value: rides),
       RepositoryProvider<BookingsRepository>.value(value: bookings),
+      RepositoryProvider<VehiclesRepository>.value(value: vehiclesRepo),
+      RepositoryProvider<TrustRepository>.value(value: trustRepo),
     ],
     child: MultiBlocProvider(
       providers: [
@@ -29,6 +42,11 @@ Widget buildApp({
         BlocProvider(create: (_) => RideSearchBloc(rides)),
         BlocProvider(create: (_) => MyBookingsBloc(bookings)),
         BlocProvider(create: (_) => BookingActionCubit(bookings)),
+        BlocProvider(create: (_) => MyRidesCubit(rides)),
+        BlocProvider(create: (_) => PostRideCubit(rides)),
+        BlocProvider(create: (_) => ProfileCubit(auth)),
+        BlocProvider(create: (_) => VehiclesCubit(vehiclesRepo)),
+        BlocProvider(create: (_) => VerificationsCubit(trustRepo)),
       ],
       child: const RideshareApp(),
     ),
@@ -124,6 +142,52 @@ void main() {
 
     final fullButton = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Full'));
     expect(fullButton.onPressed, isNull);
+  });
+
+  testWidgets('riders see no Drive tab; drivers do', (tester) async {
+    await login(tester);
+    expect(find.text('Drive'), findsNothing);
+  });
+
+  testWidgets('driver posts a ride from the Drive tab', (tester) async {
+    auth.loginAs = FakeAuthRepository.driverUser;
+    await login(tester);
+
+    await tester.tap(find.text('Drive'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No rides posted yet'), findsOneWidget);
+
+    await tester.tap(find.text('Post ride'));
+    await tester.pumpAndSettle();
+    expect(find.text('Post a ride'), findsOneWidget);
+    // Female driver sees the ladies-only switch.
+    expect(find.text('Ladies only'), findsOneWidget);
+
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Post ride'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Post ride'));
+    await tester.pumpAndSettle();
+
+    // Back on the Drive tab with the new ride listed.
+    expect(rides.posted, hasLength(1));
+    expect(rides.posted.single.seatsTotal, 3);
+    expect(rides.posted.single.pricePerSeat, 250);
+    expect(find.textContaining('DHA Phase 5 → Gulberg'), findsOneWidget);
+  });
+
+  testWidgets('profile edit saves role change and updates the app user', (tester) async {
+    await login(tester);
+    await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Full name'), 'GR Khan');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Profile updated'), findsOneWidget);
+    expect(auth.sessionUser?.name, 'GR Khan');
   });
 
   testWidgets('bookings tab lists my booking and cancel updates it', (tester) async {

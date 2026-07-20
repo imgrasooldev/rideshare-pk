@@ -50,4 +50,32 @@ class RidesRepository {
   }
 
   Future<Ride> getById(String id) async => Ride.fromJson(await _api.get('/rides/$id'));
+
+  Future<Ride> postRide({
+    required Hub origin,
+    required Hub dest,
+    required DateTime departAt,
+    required List<int> recurringDays,
+    required int seatsTotal,
+    required int pricePerSeat,
+    bool ladiesOnly = false,
+  }) async {
+    final res = await _api.post('/rides', body: {
+      'originLabel': origin.label,
+      'originLat': origin.lat,
+      'originLng': origin.lng,
+      'destLabel': dest.label,
+      'destLat': dest.lat,
+      'destLng': dest.lng,
+      'departAt': departAt.toUtc().toIso8601String(),
+      'recurringDays': recurringDays,
+      'seatsTotal': seatsTotal,
+      'pricePerSeat': pricePerSeat,
+      'ladiesOnly': ladiesOnly,
+    });
+    return Ride.fromJson(res);
+  }
+
+  Future<RidePage> myRides({String? cursor}) async =>
+      RidePage.fromJson(await _api.get('/rides/mine', query: {'cursor': ?cursor}));
 }

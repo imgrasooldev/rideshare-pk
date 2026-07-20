@@ -35,6 +35,11 @@ class ApiClient {
   Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? query}) =>
       _request(() => _dio.get<Map<String, dynamic>>(path, queryParameters: query));
 
+  /// For endpoints returning a bare JSON array.
+  Future<List<dynamic>> getList(String path, {Map<String, dynamic>? query}) =>
+      _requestAs<List<dynamic>>(() => _dio.get<List<dynamic>>(path, queryParameters: query))
+          .then((v) => v ?? const []);
+
   Future<Map<String, dynamic>> post(String path, {Object? body, bool noAuth = false}) =>
       _request(() => _dio.post<Map<String, dynamic>>(path,
           data: body, options: Options(extra: {'noAuth': noAuth})));
@@ -43,17 +48,22 @@ class ApiClient {
       _request(() => _dio.patch<Map<String, dynamic>>(path, data: body));
 
   Future<Map<String, dynamic>> _request(
-    Future<Response<Map<String, dynamic>>> Function() send, {
+    Future<Response<Map<String, dynamic>>> Function() send,
+  ) =>
+      _requestAs<Map<String, dynamic>>(send).then((v) => v ?? const {});
+
+  Future<T?> _requestAs<T>(
+    Future<Response<T>> Function() send, {
     bool retried = false,
   }) async {
     try {
       final response = await send();
-      return response.data ?? const {};
+      return response.data;
     } on DioException catch (e) {
       final status = e.response?.statusCode;
       if (status == 401 && !retried && await _storage.refreshToken != null) {
         if (await _refreshSession()) {
-          return _request(send, retried: true);
+          return _requestAs(send, retried: true);
         }
       }
       throw _toApiException(e);
