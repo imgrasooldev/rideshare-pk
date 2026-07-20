@@ -55,6 +55,47 @@ try {
   const rnd = () => String(Math.floor(Math.random() * 1e7)).padStart(7, "0");
   const driverPhone = "0300" + rnd();
 
+  // ---- Email/password auth ----
+  const emailAddr = `smoke-${rnd()}@example.com`;
+  const reg = await call("POST", "/auth/register", {
+    expectStatus: 201,
+    body: { name: "Email User", email: emailAddr, password: "supersecret1" }
+  });
+  if (!reg.accessToken || reg.user.email !== emailAddr) throw new Error("register failed");
+  await call("POST", "/auth/register", {
+    expectStatus: 409,
+    body: { email: emailAddr, password: "supersecret1" }
+  });
+  const pwLogin = await call("POST", "/auth/login", {
+    body: { email: emailAddr, password: "supersecret1" }
+  });
+  if (pwLogin.user.id !== reg.user.id) throw new Error("password login mismatch");
+  await call("POST", "/auth/login", {
+    expectStatus: 401,
+    body: { email: emailAddr, password: "wrongwrong1" }
+  });
+
+  const forgot = await call("POST", "/auth/password/forgot", { body: { email: emailAddr } });
+  if (!forgot.devResetToken) throw new Error("no dev reset token");
+  await call("POST", "/auth/password/reset", {
+    body: { token: forgot.devResetToken, password: "brandnewpass2" }
+  });
+  await call("POST", "/auth/login", {
+    expectStatus: 401,
+    body: { email: emailAddr, password: "supersecret1" }
+  });
+  await call("POST", "/auth/login", { body: { email: emailAddr, password: "brandnewpass2" } });
+
+  // Social endpoints exist and are config-gated (503 until creds are set).
+  await call("POST", "/auth/oauth/google", {
+    expectStatus: 503,
+    body: { idToken: "x".repeat(30) }
+  });
+  await call("POST", "/auth/oauth/facebook", {
+    expectStatus: 503,
+    body: { accessToken: "x".repeat(30) }
+  });
+
   // Profile
   const driver = await loginAs(driverPhone);
   const t = driver.accessToken;

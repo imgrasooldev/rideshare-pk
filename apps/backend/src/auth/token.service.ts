@@ -6,7 +6,7 @@ import { APP_CONFIG } from "../shared/tokens.js";
 
 export interface AccessClaims {
   sub: string; // user id
-  phone: string;
+  phone: string | null; // null for email/social-only accounts
 }
 
 export interface RefreshClaims {
@@ -34,7 +34,10 @@ export class TokenService {
 
   verifyAccess(token: string): AccessClaims {
     const payload = this.verify(token, this.config.JWT_ACCESS_SECRET, "access");
-    return { sub: String(payload.sub), phone: String(payload.phone) };
+    return {
+      sub: String(payload.sub),
+      phone: payload.phone == null ? null : String(payload.phone)
+    };
   }
 
   verifyRefresh(token: string): RefreshClaims {

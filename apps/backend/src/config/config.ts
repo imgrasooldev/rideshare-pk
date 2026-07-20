@@ -25,6 +25,11 @@ const envSchema = z.object({
 
   CNIC_ENC_KEY: z.string().default("dev-only-cnic-key"),
 
+  // Social sign-in (empty = provider disabled; endpoint returns 503)
+  GOOGLE_CLIENT_ID: z.string().default(""),
+  FB_APP_ID: z.string().default(""),
+  FB_APP_SECRET: z.string().default(""),
+
   OTP_TTL: z.coerce.number().int().positive().default(300),
   OTP_MAX_REQUESTS_PER_HOUR: z.coerce.number().int().positive().default(3),
   OTP_DEV_MODE: envBool(true),

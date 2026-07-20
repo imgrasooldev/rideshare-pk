@@ -11,5 +11,7 @@ export const TRIP_REPOSITORY = Symbol("TRIP_REPOSITORY");
 export const RATING_REPOSITORY = Symbol("RATING_REPOSITORY");
 export const SAFETY_REPOSITORY = Symbol("SAFETY_REPOSITORY");
 export const BUS = Symbol("BUS");
+export const IDENTITY_REPOSITORY = Symbol("IDENTITY_REPOSITORY");
+export const OAUTH_VERIFIER = Symbol("OAUTH_VERIFIER");
 export const SMS_SENDER = Symbol("SMS_SENDER");
 export const PG_POOL = Symbol("PG_POOL");

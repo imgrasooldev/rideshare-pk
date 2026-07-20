@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { loadConfig, type AppConfig } from "../config/config.js";
 import { InMemoryKvStore } from "../shared/kv.js";
 import { RedisKvStore } from "../shared/redis-kv.js";
+import { InMemoryIdentityRepository, PgIdentityRepository } from "../auth/identities.repo.js";
 import { InMemoryBookingRepository, PgBookingRepository } from "../bookings/bookings.repo.js";
 import { InMemoryRatingRepository, PgRatingRepository } from "../ratings/ratings.repo.js";
 import { InMemoryRideRepository, PgRideRepository } from "../rides/rides.repo.js";
@@ -11,6 +12,7 @@ import {
   APP_CONFIG,
   BOOKING_REPOSITORY,
   BUS,
+  IDENTITY_REPOSITORY,
   KV_STORE,
   PG_POOL,
   RATING_REPOSITORY,
@@ -100,6 +102,12 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
         pool ? new PgSafetyRepository(pool) : new InMemorySafetyRepository()
     },
     {
+      provide: IDENTITY_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgIdentityRepository(pool) : new InMemoryIdentityRepository()
+    },
+    {
       provide: BUS,
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) => {
@@ -110,7 +118,7 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
     }
   ],
   exports: [
-    APP_CONFIG, KV_STORE, PG_POOL, BUS,
+    APP_CONFIG, KV_STORE, PG_POOL, BUS, IDENTITY_REPOSITORY,
     USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY,
     BOOKING_REPOSITORY, TRIP_REPOSITORY, RATING_REPOSITORY, SAFETY_REPOSITORY
   ]

@@ -7,7 +7,8 @@ import type { UserRecord, UserRepository } from "./users.repo.js";
 
 export interface ProfileView {
   id: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
   name: string | null;
   role: UserRecord["role"];
   gender: UserRecord["gender"];
@@ -82,6 +83,7 @@ export class UsersService {
     return {
       id: user.id,
       phone: user.phone,
+      email: user.email,
       name: user.name,
       role: user.role,
       gender: user.gender,

@@ -3,7 +3,12 @@ import type { Pool } from "pg";
 // Other modules must go through this interface, never the users table.
 export interface UserRecord {
   id: string;
-  phone: string;
+  /** E.164, null for email/social-only accounts until they verify a phone. */
+  phone: string | null;
+  email: string | null;
+  emailVerified: boolean;
+  /** bcrypt hash — never leaves the repository layer's consumers. */
+  passwordHash: string | null;
   name: string | null;
   role: "driver" | "rider" | "both";
   gender: "female" | "male" | "other" | null;
@@ -25,17 +30,29 @@ export interface ProfilePatch {
   emergencyPhone?: string; // already normalised to E.164 by the service layer
 }
 
+export interface NewEmailUser {
+  email: string | null; // null for social accounts without an email
+  passwordHash: string | null; // null for social-only accounts
+  name: string | null;
+  emailVerified: boolean;
+  city: string;
+}
+
 export interface UserRepository {
   findById(id: string): Promise<UserRecord | null>;
   findByPhone(phone: string): Promise<UserRecord | null>;
+  findByEmail(email: string): Promise<UserRecord | null>;
   /** Returns the existing user for this phone, or creates a rider profile. */
   upsertByPhone(phone: string, city: string): Promise<UserRecord>;
+  createWithEmail(input: NewEmailUser): Promise<UserRecord>;
+  setPassword(id: string, passwordHash: string): Promise<void>;
   updateProfile(id: string, patch: ProfilePatch): Promise<UserRecord | null>;
   setVerified(id: string, verified: boolean): Promise<void>;
   setAdmin(id: string, isAdmin: boolean): Promise<void>;
 }
 
-const COLS = `id, phone, name, role, gender, cnic, verified, is_admin AS "isAdmin", city,
+const COLS = `id, phone, email, email_verified AS "emailVerified", password_hash AS "passwordHash",
+  name, role, gender, cnic, verified, is_admin AS "isAdmin", city,
   rating_avg::float8 AS "ratingAvg", rating_count AS "ratingCount",
   emergency_phone AS "emergencyPhone"`;
 
@@ -66,6 +83,30 @@ export class PgUserRepository implements UserRepository {
       [phone, city]
     );
     return rows[0];
+  }
+
+  async findByEmail(email: string): Promise<UserRecord | null> {
+    const { rows } = await this.pool.query(
+      `SELECT ${COLS} FROM users WHERE lower(email) = lower($1) AND deleted_at IS NULL`,
+      [email]
+    );
+    return rows[0] ?? null;
+  }
+
+  async createWithEmail(input: NewEmailUser): Promise<UserRecord> {
+    const { rows } = await this.pool.query(
+      `INSERT INTO users (email, email_verified, password_hash, name, city)
+       VALUES ($1, $2, $3, $4, $5) RETURNING ${COLS}`,
+      [input.email, input.emailVerified, input.passwordHash, input.name, input.city]
+    );
+    return rows[0];
+  }
+
+  async setPassword(id: string, passwordHash: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
+      [id, passwordHash]
+    );
   }
 
   async updateProfile(id: string, patch: ProfilePatch): Promise<UserRecord | null> {
@@ -119,12 +160,13 @@ export class InMemoryUserRepository implements UserRepository {
     return this.byPhone.get(phone) ?? null;
   }
 
-  async upsertByPhone(phone: string, city: string): Promise<UserRecord> {
-    const existing = this.byPhone.get(phone);
-    if (existing) return existing;
-    const user: UserRecord = {
+  private blank(city: string): UserRecord {
+    return {
       id: `mem-${++this.seq}`,
-      phone,
+      phone: null,
+      email: null,
+      emailVerified: false,
+      passwordHash: null,
       name: null,
       role: "rider",
       gender: null,
@@ -136,8 +178,38 @@ export class InMemoryUserRepository implements UserRepository {
       ratingCount: 0,
       emergencyPhone: null
     };
+  }
+
+  async upsertByPhone(phone: string, city: string): Promise<UserRecord> {
+    const existing = this.byPhone.get(phone);
+    if (existing) return existing;
+    const user = { ...this.blank(city), phone };
     this.byPhone.set(phone, user);
     return user;
+  }
+
+  async findByEmail(email: string): Promise<UserRecord | null> {
+    for (const u of this.byPhone.values()) {
+      if (u.email?.toLowerCase() === email.toLowerCase()) return u;
+    }
+    return null;
+  }
+
+  async createWithEmail(input: NewEmailUser): Promise<UserRecord> {
+    const user = {
+      ...this.blank(input.city),
+      email: input.email,
+      emailVerified: input.emailVerified,
+      passwordHash: input.passwordHash,
+      name: input.name
+    };
+    this.byPhone.set(`email:${user.id}`, user); // keyed arbitrarily; lookups scan values
+    return user;
+  }
+
+  async setPassword(id: string, passwordHash: string): Promise<void> {
+    const user = await this.findById(id);
+    if (user) user.passwordHash = passwordHash;
   }
 
   async updateProfile(id: string, patch: ProfilePatch): Promise<UserRecord | null> {
