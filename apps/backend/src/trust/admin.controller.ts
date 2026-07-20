@@ -1,7 +1,20 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards
+} from "@nestjs/common";
 import { z } from "zod";
 import type { AuthedRequest } from "../auth/jwt-auth.guard.js";
+import { ADMIN_INSIGHTS } from "../shared/tokens.js";
 import { parse } from "../shared/validation.js";
+import type { AdminInsightsRepository } from "./admin-insights.repo.js";
 import { AdminGuard } from "./admin.guard.js";
 import { TrustService } from "./trust.service.js";
 
@@ -9,6 +22,27 @@ const reviewDto = z.object({
   action: z.enum(["approve", "reject"]),
   notes: z.string().max(500).optional()
 });
+
+@Controller("admin")
+@UseGuards(AdminGuard)
+export class AdminInsightsController {
+  constructor(@Inject(ADMIN_INSIGHTS) private readonly insights: AdminInsightsRepository) {}
+
+  @Get("metrics")
+  metrics() {
+    return this.insights.metrics();
+  }
+
+  @Get("users")
+  users(@Query("limit") limit?: string) {
+    return this.insights.recentUsers(Math.min(Math.max(Number(limit) || 50, 1), 200));
+  }
+
+  @Get("rides")
+  rides(@Query("limit") limit?: string) {
+    return this.insights.recentRides(Math.min(Math.max(Number(limit) || 50, 1), 200));
+  }
+}
 
 @Controller("admin/verifications")
 @UseGuards(AdminGuard)

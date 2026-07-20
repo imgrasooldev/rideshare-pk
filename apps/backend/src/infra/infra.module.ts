@@ -4,11 +4,16 @@ import { loadConfig, type AppConfig } from "../config/config.js";
 import { InMemoryKvStore } from "../shared/kv.js";
 import { RedisKvStore } from "../shared/redis-kv.js";
 import { InMemoryIdentityRepository, PgIdentityRepository } from "../auth/identities.repo.js";
+import {
+  PgAdminInsightsRepository,
+  StubAdminInsightsRepository
+} from "../trust/admin-insights.repo.js";
 import { InMemoryBookingRepository, PgBookingRepository } from "../bookings/bookings.repo.js";
 import { InMemoryRatingRepository, PgRatingRepository } from "../ratings/ratings.repo.js";
 import { InMemoryRideRepository, PgRideRepository } from "../rides/rides.repo.js";
 import { InMemoryBus, RedisBus } from "../shared/bus.js";
 import {
+  ADMIN_INSIGHTS,
   APP_CONFIG,
   BOOKING_REPOSITORY,
   BUS,
@@ -108,6 +113,12 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
         pool ? new PgIdentityRepository(pool) : new InMemoryIdentityRepository()
     },
     {
+      provide: ADMIN_INSIGHTS,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgAdminInsightsRepository(pool) : new StubAdminInsightsRepository()
+    },
+    {
       provide: BUS,
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) => {
@@ -118,7 +129,7 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
     }
   ],
   exports: [
-    APP_CONFIG, KV_STORE, PG_POOL, BUS, IDENTITY_REPOSITORY,
+    APP_CONFIG, KV_STORE, PG_POOL, BUS, IDENTITY_REPOSITORY, ADMIN_INSIGHTS,
     USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY,
     BOOKING_REPOSITORY, TRIP_REPOSITORY, RATING_REPOSITORY, SAFETY_REPOSITORY
   ]

@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { Module } from "@nestjs/common";
+import { ServeStaticModule } from "@nestjs/serve-static";
 import { AuthModule } from "./auth/auth.module.js";
 import { BookingsModule } from "./bookings/bookings.module.js";
 import { HealthModule } from "./health/health.module.js";
@@ -10,11 +13,17 @@ import { TrustModule } from "./trust/trust.module.js";
 import { UsersModule } from "./users/users.module.js";
 import { VehiclesModule } from "./vehicles/vehicles.module.js";
 
+// The admin console (apps/admin, Vite build) is served at /admin when present.
+const adminDist = process.env.ADMIN_STATIC_DIR ?? join(process.cwd(), "..", "admin", "dist");
+
 // Modular monolith: each domain (auth, users, rides, matching, bookings,
 // tracking, notifications, trust, admin) gets its own module here and talks to
 // the others only through exported service interfaces — never each other's tables.
 @Module({
   imports: [
+    ...(existsSync(adminDist)
+      ? [ServeStaticModule.forRoot({ rootPath: adminDist, serveRoot: "/admin" })]
+      : []),
     InfraModule, HealthModule, AuthModule, UsersModule,
     VehiclesModule, TrustModule, RidesModule, BookingsModule,
     TrackingModule, RatingsModule
