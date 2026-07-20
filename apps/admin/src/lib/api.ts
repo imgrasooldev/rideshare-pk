@@ -1,10 +1,9 @@
-// Thin typed client for the admin endpoints. Tokens live in localStorage;
-// a 401 clears the session (refresh-token rotation is not worth the
-// complexity for an internal console).
+// Typed client for the admin endpoints. Tokens live in localStorage; a 401
+// clears the session (refresh rotation isn't worth it for an internal console).
 
-// The console is served BY the API (at /admin), so same-origin by default;
-// VITE_API_BASE_URL overrides for `vite dev` against a remote API.
-const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? location.origin;
+const BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ??
+  (typeof location !== "undefined" ? location.origin : "");
 
 export interface User {
   id: string;
@@ -31,6 +30,13 @@ export interface Metrics {
   fillRate: number;
   pendingVerifications: number;
   sosEvents: number;
+}
+
+export interface DayPoint {
+  day: string;
+  signups: number;
+  rides: number;
+  bookings: number;
 }
 
 export interface Verification {
@@ -67,7 +73,7 @@ export class ApiError extends Error {
 }
 
 function token(): string | null {
-  return localStorage.getItem("admin.accessToken");
+  return typeof localStorage !== "undefined" ? localStorage.getItem("admin.accessToken") : null;
 }
 
 export function saveSession(accessToken: string, user: User): void {
@@ -76,6 +82,7 @@ export function saveSession(accessToken: string, user: User): void {
 }
 
 export function currentUser(): User | null {
+  if (typeof localStorage === "undefined") return null;
   const raw = localStorage.getItem("admin.user");
   return raw ? (JSON.parse(raw) as User) : null;
 }
@@ -117,6 +124,7 @@ export const api = {
     request<{ accessToken: string; user: User }>("POST", "/auth/login", { email, password }),
 
   metrics: () => request<Metrics>("GET", "/admin/metrics"),
+  timeseries: (days = 14) => request<DayPoint[]>("GET", `/admin/timeseries?days=${days}`),
   users: () => request<User[]>("GET", "/admin/users?limit=100"),
   rides: () => request<AdminRide[]>("GET", "/admin/rides?limit=100"),
   verificationQueue: () =>

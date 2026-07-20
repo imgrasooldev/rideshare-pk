@@ -42,6 +42,11 @@ export class AdminInsightsController {
   rides(@Query("limit") limit?: string) {
     return this.insights.recentRides(Math.min(Math.max(Number(limit) || 50, 1), 200));
   }
+
+  @Get("timeseries")
+  timeseries(@Query("days") days?: string) {
+    return this.insights.timeseries(Math.min(Math.max(Number(days) || 14, 7), 90));
+  }
 }
 
 @Controller("admin/verifications")

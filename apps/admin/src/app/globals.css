@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #e6f5ef;
+  --color-brand-100: #c4e8d9;
+  --color-brand-500: #00a06b;
+  --color-brand-600: #00875a;
+  --color-brand-700: #006c48;
+  --color-sidebar: #1e1e2d;
+  --color-sidebar-hover: #2a2a3c;
+  --color-page: #f5f8fa;
+}
+
+body {
+  background: var(--color-page);
+  color: #181c32;
+  font-feature-settings: "cv02", "cv03", "cv04";
+}
+
+::selection {
+  background: var(--color-brand-100);
+}
+
+/* Metronic-style soft card shadow */
+.card-soft {
+  box-shadow: 0 0 20px 0 rgb(76 87 125 / 0.05);
+}

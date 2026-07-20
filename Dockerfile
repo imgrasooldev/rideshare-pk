@@ -20,7 +20,7 @@ WORKDIR /app
 ENV NODE_ENV=production PORT=4000 ADMIN_STATIC_DIR=/app/admin-dist
 COPY --from=prod-deps /app ./
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist
-COPY --from=build /app/apps/admin/dist ./admin-dist
+COPY --from=build /app/apps/admin/out ./admin-dist
 USER node
 EXPOSE 4000
 CMD ["node", "apps/backend/dist/main.js"]

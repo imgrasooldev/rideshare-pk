@@ -42,11 +42,19 @@ export interface AdminRideRow {
   driverName: string | null;
 }
 
+export interface DayPoint {
+  day: string; // YYYY-MM-DD
+  signups: number;
+  rides: number;
+  bookings: number;
+}
+
 /** Read-only oversight queries for the admin console (PG-backed). */
 export interface AdminInsightsRepository {
   metrics(): Promise<MarketplaceMetrics>;
   recentUsers(limit: number): Promise<AdminUserRow[]>;
   recentRides(limit: number): Promise<AdminRideRow[]>;
+  timeseries(days: number): Promise<DayPoint[]>;
 }
 
 export class PgAdminInsightsRepository implements AdminInsightsRepository {
@@ -84,6 +92,22 @@ export class PgAdminInsightsRepository implements AdminInsightsRepository {
     return rows;
   }
 
+  async timeseries(days: number): Promise<DayPoint[]> {
+    const { rows } = await this.pool.query(
+      `WITH days AS (
+         SELECT generate_series(current_date - ($1::int - 1) * interval '1 day',
+                                current_date, interval '1 day')::date AS day
+       )
+       SELECT to_char(day, 'YYYY-MM-DD') AS day,
+         (SELECT count(*)::int FROM users    WHERE created_at::date = day AND deleted_at IS NULL) AS signups,
+         (SELECT count(*)::int FROM rides    WHERE created_at::date = day)                        AS rides,
+         (SELECT count(*)::int FROM bookings WHERE created_at::date = day)                        AS bookings
+       FROM days ORDER BY day`,
+      [days]
+    );
+    return rows;
+  }
+
   async recentRides(limit: number): Promise<AdminRideRow[]> {
     const { rows } = await this.pool.query(
       `SELECT r.id, r.origin_label AS "originLabel", r.dest_label AS "destLabel",
@@ -114,6 +138,10 @@ export class StubAdminInsightsRepository implements AdminInsightsRepository {
   }
 
   async recentRides(): Promise<AdminRideRow[]> {
+    return [];
+  }
+
+  async timeseries(): Promise<DayPoint[]> {
     return [];
   }
 }
