@@ -27,6 +27,7 @@ CREATE TABLE users (
   rating_avg    numeric(3,2) NOT NULL DEFAULT 0,
   rating_count  integer NOT NULL DEFAULT 0,
   city          text NOT NULL DEFAULT 'lahore',
+  emergency_phone text,
   org_id        uuid REFERENCES organizations(id),
   deleted_at    timestamptz,                    -- soft delete
   created_at    timestamptz NOT NULL DEFAULT now(),
@@ -99,11 +100,25 @@ CREATE TABLE trips (
   started_at  timestamptz,
   ended_at    timestamptz,
   live_status text NOT NULL DEFAULT 'pending' CHECK (live_status IN ('pending','live','ended')),
+  share_token uuid NOT NULL DEFAULT gen_random_uuid(),  -- public share-my-trip link
   created_at  timestamptz NOT NULL DEFAULT now(),
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
--- Live driver locations live in Redis geo sets; an optional persisted trail
--- table (trip_points) can be added when needed — do not write per-ping rows here.
+CREATE UNIQUE INDEX trips_share_token ON trips (share_token);
+CREATE UNIQUE INDEX trips_one_live_per_ride ON trips (ride_id) WHERE live_status = 'live';
+-- Live driver locations live in Redis (KV with TTL); an optional persisted
+-- trail table (trip_points) can be added when needed — no per-ping rows here.
+
+CREATE TABLE safety_events (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    uuid NOT NULL REFERENCES users(id),
+  ride_id    uuid REFERENCES rides(id),
+  kind       text NOT NULL DEFAULT 'sos' CHECK (kind IN ('sos')),
+  lat        double precision,
+  lng        double precision,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX safety_events_user ON safety_events (user_id, created_at DESC);
 
 CREATE TABLE ratings (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),

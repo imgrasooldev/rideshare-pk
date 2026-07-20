@@ -12,6 +12,9 @@ export interface UserRecord {
   verified: boolean;
   isAdmin: boolean;
   city: string;
+  ratingAvg: number;
+  ratingCount: number;
+  emergencyPhone: string | null;
 }
 
 export interface ProfilePatch {
@@ -19,6 +22,7 @@ export interface ProfilePatch {
   role?: UserRecord["role"];
   gender?: NonNullable<UserRecord["gender"]>;
   cnic?: string; // already encrypted by the service layer
+  emergencyPhone?: string; // already normalised to E.164 by the service layer
 }
 
 export interface UserRepository {
@@ -31,7 +35,9 @@ export interface UserRepository {
   setAdmin(id: string, isAdmin: boolean): Promise<void>;
 }
 
-const COLS = `id, phone, name, role, gender, cnic, verified, is_admin AS "isAdmin", city`;
+const COLS = `id, phone, name, role, gender, cnic, verified, is_admin AS "isAdmin", city,
+  rating_avg::float8 AS "ratingAvg", rating_count AS "ratingCount",
+  emergency_phone AS "emergencyPhone"`;
 
 export class PgUserRepository implements UserRepository {
   constructor(private readonly pool: Pool) {}
@@ -69,10 +75,18 @@ export class PgUserRepository implements UserRepository {
          role = COALESCE($3, role),
          gender = COALESCE($4, gender),
          cnic = COALESCE($5, cnic),
+         emergency_phone = COALESCE($6, emergency_phone),
          updated_at = now()
        WHERE id = $1 AND deleted_at IS NULL
        RETURNING ${COLS}`,
-      [id, patch.name ?? null, patch.role ?? null, patch.gender ?? null, patch.cnic ?? null]
+      [
+        id,
+        patch.name ?? null,
+        patch.role ?? null,
+        patch.gender ?? null,
+        patch.cnic ?? null,
+        patch.emergencyPhone ?? null
+      ]
     );
     return rows[0] ?? null;
   }
@@ -117,7 +131,10 @@ export class InMemoryUserRepository implements UserRepository {
       cnic: null,
       verified: false,
       isAdmin: false,
-      city
+      city,
+      ratingAvg: 0,
+      ratingCount: 0,
+      emergencyPhone: null
     };
     this.byPhone.set(phone, user);
     return user;
@@ -130,6 +147,7 @@ export class InMemoryUserRepository implements UserRepository {
     if (patch.role !== undefined) user.role = patch.role;
     if (patch.gender !== undefined) user.gender = patch.gender;
     if (patch.cnic !== undefined) user.cnic = patch.cnic;
+    if (patch.emergencyPhone !== undefined) user.emergencyPhone = patch.emergencyPhone;
     return user;
   }
 

@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { normalizePkPhone } from "../auth/phone.js";
 import type { AppConfig } from "../config/config.js";
 import { decryptString, encryptString } from "../shared/crypto.js";
 import { APP_CONFIG, USER_REPOSITORY } from "../shared/tokens.js";
@@ -14,6 +15,9 @@ export interface ProfileView {
   cnicMasked: string | null;
   verified: boolean;
   city: string;
+  ratingAvg: number;
+  ratingCount: number;
+  emergencyPhone: string | null;
 }
 
 export interface UpdateMeInput {
@@ -21,6 +25,7 @@ export interface UpdateMeInput {
   role?: UserRecord["role"];
   gender?: NonNullable<UserRecord["gender"]>;
   cnic?: string;
+  emergencyPhone?: string;
 }
 
 @Injectable()
@@ -45,11 +50,20 @@ export class UsersService {
       }
       cnicEncrypted = encryptString(digits, this.config.CNIC_ENC_KEY);
     }
+    let emergencyPhone: string | undefined;
+    if (input.emergencyPhone !== undefined) {
+      const normalised = normalizePkPhone(input.emergencyPhone);
+      if (!normalised) {
+        throw new BadRequestException("Emergency contact must be a Pakistani mobile number");
+      }
+      emergencyPhone = normalised;
+    }
     const updated = await this.users.updateProfile(userId, {
       name: input.name,
       role: input.role,
       gender: input.gender,
-      cnic: cnicEncrypted
+      cnic: cnicEncrypted,
+      emergencyPhone
     });
     if (!updated) throw new NotFoundException("User not found");
     return this.toView(updated);
@@ -73,7 +87,10 @@ export class UsersService {
       gender: user.gender,
       cnicMasked,
       verified: user.verified,
-      city: user.city
+      city: user.city,
+      ratingAvg: user.ratingAvg,
+      ratingCount: user.ratingCount,
+      emergencyPhone: user.emergencyPhone
     };
   }
 }

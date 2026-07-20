@@ -8,7 +8,8 @@ const updateMeDto = z.object({
   name: z.string().trim().min(2).max(60).optional(),
   role: z.enum(["driver", "rider", "both"]).optional(),
   gender: z.enum(["female", "male", "other"]).optional(),
-  cnic: z.string().min(13).max(15).optional()
+  cnic: z.string().min(13).max(15).optional(),
+  emergencyPhone: z.string().min(10).max(20).optional()
 });
 
 @Controller("me")

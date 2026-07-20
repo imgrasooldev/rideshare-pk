@@ -194,7 +194,83 @@ try {
     const mineList = await call("GET", "/bookings/mine", { token: racers[winnerIdx].accessToken });
     if (mineList.items[0]?.status !== "cancelled") throw new Error("bookings/mine wrong");
 
-    console.log("API SMOKE OK (admin review + rides + race-safe bookings against real DB)");
+    // ---- Trip tracking over a real WebSocket ----
+    const { io } = await import("socket.io-client");
+    const trip = await call("POST", `/trips/${ride.id}/start`, { token: t });
+    if (trip.liveStatus !== "live" || !trip.shareToken) throw new Error("trip start wrong");
+
+    // A booked rider subscribes over WS.
+    const riderTok = racers[(winnerIdx + 1) % 4].accessToken;
+    const socket = io(`http://localhost:${PORT}/trips`, {
+      auth: { token: riderTok, rideId: ride.id },
+      transports: ["websocket"]
+    });
+    const gotLocation = new Promise((resolve, reject) => {
+      socket.on("location", resolve);
+      socket.on("error", (e) => reject(new Error(`ws error: ${e.message}`)));
+      setTimeout(() => reject(new Error("no WS location within 10s")), 10_000);
+    });
+    const gotEnded = new Promise((resolve, reject) => {
+      socket.on("ended", resolve);
+      setTimeout(() => reject(new Error("no WS ended within 15s")), 15_000);
+    });
+
+    await new Promise((resolve, reject) => {
+      socket.on("connect", resolve);
+      socket.on("connect_error", reject);
+    });
+
+    // Driver pings via REST fallback; the rider must receive it over WS.
+    const ping = await call("POST", `/trips/${ride.id}/location`, {
+      token: t,
+      body: { lat: 31.5015, lng: 74.3441 }
+    });
+    if (!ping.accepted) throw new Error("location ping not accepted");
+    const loc = await gotLocation;
+    if (Math.abs(loc.lat - 31.5015) > 1e-6) throw new Error("WS location wrong");
+
+    // Throttle: an immediate second ping must be dropped.
+    const ping2 = await call("POST", `/trips/${ride.id}/location`, {
+      token: t,
+      body: { lat: 31.6, lng: 74.4 }
+    });
+    if (ping2.accepted) throw new Error("throttle failed — second ping accepted");
+
+    // Public share link works with NO auth.
+    const shared = await call("GET", `/trips/shared/${trip.shareToken}`);
+    if (shared.status !== "live" || !shared.location) throw new Error("shared view wrong");
+
+    // ---- Ratings ----
+    const rated = await call("POST", "/ratings", {
+      token: riderTok,
+      expectStatus: 201,
+      body: { rideId: ride.id, toUserId: me1.id, stars: 5, comment: "Smooth" }
+    });
+    if (rated.stars !== 5) throw new Error("rating failed");
+    await call("POST", "/ratings", {
+      token: riderTok,
+      expectStatus: 409,
+      body: { rideId: ride.id, toUserId: me1.id, stars: 1 }
+    });
+    const meRated = await call("GET", "/me", { token: t });
+    if (meRated.ratingAvg !== 5 || meRated.ratingCount !== 1) {
+      throw new Error(`rating aggregate wrong: ${meRated.ratingAvg}/${meRated.ratingCount}`);
+    }
+
+    // ---- Safety ----
+    await call("PATCH", "/me", { token: riderTok, body: { emergencyPhone: "03459998877" } });
+    const sos = await call("POST", "/safety/sos", {
+      token: riderTok,
+      body: { rideId: ride.id, lat: 31.5, lng: 74.35 }
+    });
+    if (!sos.logged || !sos.emergencyContactOnFile) throw new Error("sos flow wrong");
+
+    // ---- Trip end reaches the WS subscriber ----
+    await call("POST", `/trips/${ride.id}/end`, { token: t });
+    await gotEnded;
+    socket.close();
+
+    console.log("API SMOKE OK (bookings race + WS tracking + ratings + safety against real DB)");
   } else {
     // In-memory mode can't flip admin — but the driver-verification gate must hold.
     await call("POST", "/rides", {

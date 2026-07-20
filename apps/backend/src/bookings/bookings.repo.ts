@@ -34,6 +34,8 @@ export interface BookingRepository {
   /** Cancel own booking; restores seats and reopens a full ride. */
   cancel(bookingId: string, riderId: string): Promise<BookingRecord>;
   listByRider(riderId: string, cursor: string | null, limit: number): Promise<BookingPage>;
+  /** True when the rider holds a confirmed/completed booking on the ride. */
+  hasBookingForRide(riderId: string, rideId: string): Promise<boolean>;
 }
 
 function encodeCursor(b: BookingRecord): string {
@@ -139,6 +141,15 @@ export class PgBookingRepository implements BookingRepository {
     }
   }
 
+  async hasBookingForRide(riderId: string, rideId: string): Promise<boolean> {
+    const { rows } = await this.pool.query(
+      `SELECT 1 FROM bookings
+       WHERE rider_id = $1 AND ride_id = $2 AND status IN ('confirmed','completed') LIMIT 1`,
+      [riderId, rideId]
+    );
+    return rows.length > 0;
+  }
+
   async listByRider(riderId: string, cursor: string | null, limit: number): Promise<BookingPage> {
     const after = cursor ? decodeCursor(cursor) : null;
     const params: unknown[] = [riderId, limit + 1];
@@ -227,6 +238,19 @@ export class InMemoryBookingRepository implements BookingRepository {
       if (ride.status === "full") ride.status = "open";
     }
     return b;
+  }
+
+  async hasBookingForRide(riderId: string, rideId: string): Promise<boolean> {
+    for (const b of this.items.values()) {
+      if (
+        b.riderId === riderId &&
+        b.rideId === rideId &&
+        (b.status === "confirmed" || b.status === "completed")
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async listByRider(riderId: string, cursor: string | null, limit: number): Promise<BookingPage> {

@@ -3,7 +3,9 @@ import { AuthModule } from "./auth/auth.module.js";
 import { BookingsModule } from "./bookings/bookings.module.js";
 import { HealthModule } from "./health/health.module.js";
 import { InfraModule } from "./infra/infra.module.js";
+import { RatingsModule } from "./ratings/ratings.module.js";
 import { RidesModule } from "./rides/rides.module.js";
+import { TrackingModule } from "./tracking/tracking.module.js";
 import { TrustModule } from "./trust/trust.module.js";
 import { UsersModule } from "./users/users.module.js";
 import { VehiclesModule } from "./vehicles/vehicles.module.js";
@@ -14,7 +16,8 @@ import { VehiclesModule } from "./vehicles/vehicles.module.js";
 @Module({
   imports: [
     InfraModule, HealthModule, AuthModule, UsersModule,
-    VehiclesModule, TrustModule, RidesModule, BookingsModule
+    VehiclesModule, TrustModule, RidesModule, BookingsModule,
+    TrackingModule, RatingsModule
   ]
 })
 export class AppModule {}

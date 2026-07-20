@@ -4,17 +4,25 @@ import { loadConfig, type AppConfig } from "../config/config.js";
 import { InMemoryKvStore } from "../shared/kv.js";
 import { RedisKvStore } from "../shared/redis-kv.js";
 import { InMemoryBookingRepository, PgBookingRepository } from "../bookings/bookings.repo.js";
+import { InMemoryRatingRepository, PgRatingRepository } from "../ratings/ratings.repo.js";
 import { InMemoryRideRepository, PgRideRepository } from "../rides/rides.repo.js";
+import { InMemoryBus, RedisBus } from "../shared/bus.js";
 import {
   APP_CONFIG,
   BOOKING_REPOSITORY,
+  BUS,
   KV_STORE,
   PG_POOL,
+  RATING_REPOSITORY,
   RIDE_REPOSITORY,
+  SAFETY_REPOSITORY,
+  TRIP_REPOSITORY,
   USER_REPOSITORY,
   VEHICLE_REPOSITORY,
   VERIFICATION_REPOSITORY
 } from "../shared/tokens.js";
+import { InMemoryTripRepository, PgTripRepository } from "../tracking/trips.repo.js";
+import { InMemorySafetyRepository, PgSafetyRepository } from "../trust/safety.repo.js";
 import { InMemoryVerificationRepository, PgVerificationRepository } from "../trust/verifications.repo.js";
 import { InMemoryUserRepository, PgUserRepository } from "../users/users.repo.js";
 import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehicles.repo.js";
@@ -72,11 +80,39 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
       inject: [PG_POOL, RIDE_REPOSITORY],
       useFactory: (pool: Pool | null, rides: InMemoryRideRepository) =>
         pool ? new PgBookingRepository(pool) : new InMemoryBookingRepository(rides)
+    },
+    {
+      provide: TRIP_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgTripRepository(pool) : new InMemoryTripRepository()
+    },
+    {
+      provide: RATING_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgRatingRepository(pool) : new InMemoryRatingRepository()
+    },
+    {
+      provide: SAFETY_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgSafetyRepository(pool) : new InMemorySafetyRepository()
+    },
+    {
+      provide: BUS,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => {
+        if (config.REDIS_URL) return new RedisBus(config.REDIS_URL);
+        console.warn("REDIS_URL not set — using in-process pub/sub (single instance only)");
+        return new InMemoryBus();
+      }
     }
   ],
   exports: [
-    APP_CONFIG, KV_STORE, PG_POOL,
-    USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY, BOOKING_REPOSITORY
+    APP_CONFIG, KV_STORE, PG_POOL, BUS,
+    USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY,
+    BOOKING_REPOSITORY, TRIP_REPOSITORY, RATING_REPOSITORY, SAFETY_REPOSITORY
   ]
 })
 export class InfraModule {}
