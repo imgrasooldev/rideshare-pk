@@ -8,6 +8,7 @@ import {
 import { BOOKING_REPOSITORY, RIDE_REPOSITORY, USER_REPOSITORY } from "../shared/tokens.js";
 import type { RideRepository } from "../rides/rides.repo.js";
 import type { UserRepository } from "../users/users.repo.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import type { BookingPage, BookingRecord, BookingRepository } from "./bookings.repo.js";
 
 @Injectable()
@@ -15,7 +16,8 @@ export class BookingsService {
   constructor(
     @Inject(BOOKING_REPOSITORY) private readonly bookings: BookingRepository,
     @Inject(RIDE_REPOSITORY) private readonly rides: RideRepository,
-    @Inject(USER_REPOSITORY) private readonly users: UserRepository
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    private readonly notifications: NotificationsService
   ) {}
 
   async book(riderId: string, rideId: string, seats: number, idempotencyKey: string): Promise<BookingRecord> {
@@ -35,7 +37,18 @@ export class BookingsService {
     }
     // Seat availability is NOT checked here — the repository's conditional
     // UPDATE is the single source of truth, immune to check-then-act races.
-    return this.bookings.create(riderId, rideId, seats, idempotencyKey);
+    const booking = await this.bookings.create(riderId, rideId, seats, idempotencyKey);
+
+    // Ping the driver's notification center (best-effort, never blocks booking).
+    const rider = await this.users.findById(riderId);
+    void this.notifications.notify(
+      ride.driverId,
+      "booking",
+      "New booking on your ride",
+      `${rider?.name ?? "A rider"} booked ${seats} seat${seats > 1 ? "s" : ""} · ${ride.originLabel} → ${ride.destLabel}`,
+      { rideId, bookingId: booking.id }
+    );
+    return booking;
   }
 
   cancel(bookingId: string, riderId: string): Promise<BookingRecord> {

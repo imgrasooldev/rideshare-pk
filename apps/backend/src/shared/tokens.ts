@@ -16,3 +16,4 @@ export const OAUTH_VERIFIER = Symbol("OAUTH_VERIFIER");
 export const ADMIN_INSIGHTS = Symbol("ADMIN_INSIGHTS");
 export const SMS_SENDER = Symbol("SMS_SENDER");
 export const PG_POOL = Symbol("PG_POOL");
+export const NOTIFICATION_REPOSITORY = Symbol("NOTIFICATION_REPOSITORY");

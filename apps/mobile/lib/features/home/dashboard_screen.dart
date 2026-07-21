@@ -5,6 +5,8 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../auth/data/models/user.dart';
 import '../bookings/bloc/my_bookings_bloc.dart';
+import '../notifications/bloc/notifications_cubit.dart';
+import '../notifications/presentation/notifications_screen.dart';
 import '../places/bloc/places_cubit.dart';
 import '../rides/bloc/ride_search_bloc.dart';
 import '../rides/data/models/ride.dart';
@@ -47,6 +49,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Load the user's bookings so the home can surface their next ride.
       context.read<MyBookingsBloc>().add(const MyBookingsRequested());
+      // Load the notification bell's unread count.
+      context.read<NotificationsCubit>().load();
     });
   }
 
@@ -260,7 +264,7 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  _circleBtn(Icons.notifications_none_rounded),
+                  const _NotifBell(),
                   const SizedBox(width: 10),
                   Container(
                     width: 38,
@@ -292,16 +296,62 @@ class _Header extends StatelessWidget {
     );
   }
 
-  Widget _circleBtn(IconData icon) => Container(
-        width: 38,
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, size: 20, color: Colors.white),
-      );
+}
+
+/// Header bell — opens the notification center and shows the unread count.
+class _NotifBell extends StatelessWidget {
+  const _NotifBell();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.notifications_none_rounded, size: 20, color: Colors.white),
+          ),
+          BlocBuilder<NotificationsCubit, NotificationsState>(
+            builder: (context, state) {
+              if (state.unread == 0) return const SizedBox.shrink();
+              return Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFE81E2D), width: 1.5),
+                  ),
+                  child: Text(
+                    state.unread > 9 ? '9+' : '${state.unread}',
+                    style: const TextStyle(
+                        color: Color(0xFFE81E2D),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        height: 1),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Service {
