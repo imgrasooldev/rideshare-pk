@@ -1125,6 +1125,14 @@ class _LiveRideCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
+                    if (ride.driverRatingCount > 0) ...[
+                      _Pill(
+                          icon: Icons.star_rounded,
+                          text: ride.driverRatingAvg.toStringAsFixed(1),
+                          color: const Color(0xFFE19700),
+                          tint: const Color(0xFFFFF3D6)),
+                      const SizedBox(width: 8),
+                    ],
                     _Pill(icon: Icons.schedule_rounded, text: DateFormat('h:mm a').format(ride.departAt)),
                     const SizedBox(width: 8),
                     _Pill(

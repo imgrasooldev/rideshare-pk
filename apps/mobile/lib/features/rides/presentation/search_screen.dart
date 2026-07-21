@@ -442,6 +442,12 @@ class _RideCard extends StatelessWidget {
                 _Meta(
                     icon: vehicleTypeIcon(ride.vehicleType),
                     text: vehicleTypeLabel(ride.vehicleType)),
+                if (ride.driverRatingCount > 0)
+                  _Meta(
+                      icon: Icons.star_rounded,
+                      text:
+                          '${ride.driverRatingAvg.toStringAsFixed(1)} (${ride.driverRatingCount})',
+                      color: const Color(0xFFE19700)),
                 _Meta(
                     icon: Icons.schedule_rounded,
                     text: DateFormat('h:mm a').format(ride.departAt)),

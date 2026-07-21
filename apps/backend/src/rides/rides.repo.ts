@@ -27,6 +27,9 @@ export interface RideRecord {
   ladiesOnly: boolean;
   status: RideStatus;
   city: string;
+  /** Driver's cached rating aggregate (from users); absent on create(). */
+  driverRatingAvg?: number;
+  driverRatingCount?: number;
 }
 
 export interface NewRide {
@@ -101,6 +104,20 @@ const COLS = `id, driver_id AS "driverId", vehicle_id AS "vehicleId",
   price_per_seat AS "pricePerSeat", vertical, vehicle_type AS "vehicleType",
   payment_method AS "paymentMethod", ladies_only AS "ladiesOnly", status, city`;
 
+// Same columns, table-qualified with `r`, plus the driver's rating aggregate
+// via a join on users. Used by reads that surface the driver to riders.
+const COLS_R = `r.id, r.driver_id AS "driverId", r.vehicle_id AS "vehicleId",
+  r.origin_label AS "originLabel",
+  ST_Y(r.origin_geo::geometry) AS "originLat", ST_X(r.origin_geo::geometry) AS "originLng",
+  r.dest_label AS "destLabel",
+  ST_Y(r.dest_geo::geometry) AS "destLat", ST_X(r.dest_geo::geometry) AS "destLng",
+  r.depart_at AS "departAt", r.recurring_days AS "recurringDays",
+  r.seats_total AS "seatsTotal", r.seats_available AS "seatsAvailable",
+  r.price_per_seat AS "pricePerSeat", r.vertical, r.vehicle_type AS "vehicleType",
+  r.payment_method AS "paymentMethod", r.ladies_only AS "ladiesOnly", r.status, r.city,
+  COALESCE(u.rating_avg, 0)::float8 AS "driverRatingAvg",
+  COALESCE(u.rating_count, 0) AS "driverRatingCount"`;
+
 export class PgRideRepository implements RideRepository {
   constructor(private readonly pool: Pool) {}
 
@@ -127,7 +144,10 @@ export class PgRideRepository implements RideRepository {
   }
 
   async findById(id: string): Promise<RideRecord | null> {
-    const { rows } = await this.pool.query(`SELECT ${COLS} FROM rides WHERE id = $1`, [id]);
+    const { rows } = await this.pool.query(
+      `SELECT ${COLS_R} FROM rides r LEFT JOIN users u ON u.id = r.driver_id WHERE r.id = $1`,
+      [id]
+    );
     return rows[0] ?? null;
   }
 
@@ -140,33 +160,33 @@ export class PgRideRepository implements RideRepository {
       p.departAfter, p.departBefore, p.limit + 1
     ];
     let sql = `
-      SELECT ${COLS} FROM rides
-      WHERE status = 'open'
-        AND seats_available > 0
-        AND depart_at BETWEEN $6 AND $7
-        AND ST_DWithin(origin_geo, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
-        AND ST_DWithin(dest_geo,   ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)`;
+      SELECT ${COLS_R} FROM rides r LEFT JOIN users u ON u.id = r.driver_id
+      WHERE r.status = 'open'
+        AND r.seats_available > 0
+        AND r.depart_at BETWEEN $6 AND $7
+        AND ST_DWithin(r.origin_geo, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
+        AND ST_DWithin(r.dest_geo,   ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)`;
     if (p.ladiesOnly !== undefined) {
       params.push(p.ladiesOnly);
-      sql += ` AND ladies_only = $${params.length}`;
+      sql += ` AND r.ladies_only = $${params.length}`;
     }
     if (p.vehicleType) {
       params.push(p.vehicleType);
-      sql += ` AND vehicle_type = $${params.length}`;
+      sql += ` AND r.vehicle_type = $${params.length}`;
     }
     if (p.vertical) {
       params.push(p.vertical);
-      sql += ` AND vertical = $${params.length}`;
+      sql += ` AND r.vertical = $${params.length}`;
     }
     if (p.city) {
       params.push(p.city);
-      sql += ` AND city = $${params.length}`;
+      sql += ` AND r.city = $${params.length}`;
     }
     if (after) {
       params.push(after.departAt, after.id);
-      sql += ` AND (depart_at, id) > ($${params.length - 1}::timestamptz, $${params.length}::uuid)`;
+      sql += ` AND (r.depart_at, r.id) > ($${params.length - 1}::timestamptz, $${params.length}::uuid)`;
     }
-    sql += ` ORDER BY depart_at, id LIMIT $8`;
+    sql += ` ORDER BY r.depart_at, r.id LIMIT $8`;
 
     const { rows } = await this.pool.query(sql, params);
     const items = rows.slice(0, p.limit);
