@@ -58,6 +58,7 @@ export interface RideSearch {
   departBefore: string;
   ladiesOnly?: boolean;
   vehicleType?: RideVehicleType;
+  vertical?: Vertical;
   city?: string;
   cursor: string | null;
   limit: number;
@@ -153,6 +154,10 @@ export class PgRideRepository implements RideRepository {
       params.push(p.vehicleType);
       sql += ` AND vehicle_type = $${params.length}`;
     }
+    if (p.vertical) {
+      params.push(p.vertical);
+      sql += ` AND vertical = $${params.length}`;
+    }
     if (p.city) {
       params.push(p.city);
       sql += ` AND city = $${params.length}`;
@@ -231,6 +236,7 @@ export class InMemoryRideRepository implements RideRepository {
           distanceM(r.destLat, r.destLng, p.dropLat, p.dropLng) <= p.radiusM &&
           (p.ladiesOnly === undefined || r.ladiesOnly === p.ladiesOnly) &&
           (!p.vehicleType || r.vehicleType === p.vehicleType) &&
+          (!p.vertical || r.vertical === p.vertical) &&
           (!p.city || r.city === p.city)
       )
       .sort((a, b) => a.departAt.localeCompare(b.departAt) || a.id.localeCompare(b.id))

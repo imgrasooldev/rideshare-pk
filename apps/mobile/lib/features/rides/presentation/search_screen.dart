@@ -7,6 +7,7 @@ import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/network/api_exception.dart';
 import '../../bookings/bloc/booking_action_cubit.dart';
+import '../../categories/bloc/categories_cubit.dart';
 import '../../places/bloc/places_cubit.dart';
 import '../../subscriptions/data/subscriptions_repository.dart';
 import '../bloc/ride_search_bloc.dart';
@@ -14,7 +15,13 @@ import '../data/models/ride.dart';
 import '../data/rides_repository.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.initialVertical, this.initialLadiesOnly = false});
+
+  /// Pre-selected category (ride vertical) to filter by, e.g. 'office'.
+  final String? initialVertical;
+
+  /// Pre-selects the ladies-only filter (used by the Ladies category tile).
+  final bool initialLadiesOnly;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -24,8 +31,43 @@ class _SearchScreenState extends State<SearchScreen> {
   Hub? _pickup;
   Hub? _drop;
   DateTime _day = DateTime.now().add(const Duration(days: 1));
-  bool _ladiesOnly = false;
+  late bool _ladiesOnly = widget.initialLadiesOnly;
   String? _vehicleType; // null = any
+  late String? _vertical = widget.initialVertical;
+
+  @override
+  void initState() {
+    super.initState();
+    // If we arrived here from a category tile, run the filtered search once the
+    // default hubs are in place (after the first frame).
+    if (_vertical != null || _ladiesOnly) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _search());
+    }
+  }
+
+  @override
+  void didUpdateWidget(SearchScreen old) {
+    super.didUpdateWidget(old);
+    // A new category was tapped on the dashboard while this tab already existed.
+    if (widget.initialVertical != old.initialVertical ||
+        widget.initialLadiesOnly != old.initialLadiesOnly) {
+      setState(() {
+        _vertical = widget.initialVertical;
+        _ladiesOnly = widget.initialLadiesOnly;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _search());
+    }
+  }
+
+  String _verticalLabel(String key) {
+    final state = context.read<CategoriesCubit>().state;
+    if (state is CategoriesLoaded) {
+      for (final c in state.items) {
+        if (c.key == key) return c.label;
+      }
+    }
+    return key.isEmpty ? key : key[0].toUpperCase() + key.substring(1);
+  }
 
   void _search() {
     final pickup = _pickup;
@@ -37,6 +79,7 @@ class _SearchScreenState extends State<SearchScreen> {
           day: _day,
           ladiesOnly: _ladiesOnly,
           vehicleType: _vehicleType,
+          vertical: _vertical,
         ));
   }
 
@@ -103,6 +146,26 @@ class _SearchScreenState extends State<SearchScreen> {
             }),
             onSearch: _search,
           ),
+          if (_vertical != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Chip(
+                  avatar: Icon(Icons.category_rounded,
+                      size: 16, color: Theme.of(context).colorScheme.primary),
+                  label: Text(_verticalLabel(_vertical!)),
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                  side: BorderSide(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                  onDeleted: () {
+                    setState(() => _vertical = null);
+                    _search();
+                  },
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,

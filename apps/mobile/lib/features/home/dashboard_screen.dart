@@ -5,6 +5,8 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../auth/data/models/user.dart';
 import '../bookings/bloc/my_bookings_bloc.dart';
+import '../categories/bloc/categories_cubit.dart';
+import '../categories/data/categories_repository.dart';
 import '../driver/presentation/become_driver_screen.dart';
 import '../notifications/bloc/notifications_cubit.dart';
 import '../notifications/presentation/notifications_screen.dart';
@@ -30,8 +32,9 @@ class DashboardScreen extends StatefulWidget {
 
   final User user;
 
-  /// Opens the Search tab; [ladiesOnly] pre-selects the ladies filter.
-  final void Function({bool ladiesOnly}) onOpenSearch;
+  /// Opens the Search tab; [ladiesOnly] pre-selects the ladies filter and
+  /// [vertical] pre-selects a category filter.
+  final void Function({bool ladiesOnly, String? vertical}) onOpenSearch;
 
   /// Switch to the Bookings tab.
   final VoidCallback onOpenBookings;
@@ -118,29 +121,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ? widget.user.name!.trim().split(' ').first
         : 'there';
 
-    final services = <_Service>[
-      _Service('Office Pick & Drop', Icons.work_outline_rounded,
-          const Color(0xFFFF3B30), const Color(0xFFFFECEB), () => widget.onOpenSearch()),
-      _Service('School & College', Icons.school_outlined,
-          const Color(0xFFE19700), const Color(0xFFFFF3D6), () => widget.onOpenSearch()),
-      _Service('City Travel', Icons.location_city_rounded,
-          const Color(0xFF1E88D6), const Color(0xFFE1F1FD), () => widget.onOpenSearch()),
-      _Service('Rent a Car', Icons.car_rental_rounded,
-          const Color(0xFF12A46B), const Color(0xFFDFF6EC), () => _comingSoon('Rent a Car')),
-      _Service('Ladies Only', Icons.favorite_outline_rounded,
-          const Color(0xFFD6488B), const Color(0xFFFCE7F0),
-          () => widget.onOpenSearch(ladiesOnly: true)),
-      _Service('Corporate', Icons.business_rounded,
-          const Color(0xFF7C5AE0), const Color(0xFFEDE9FD), () => widget.onOpenSearch()),
-      _Service('Airport Shuttle', Icons.flight_rounded,
-          const Color(0xFF3B72E0), const Color(0xFFE4EEFE), () => widget.onOpenSearch()),
-      _Service('Parcel Delivery', Icons.local_shipping_outlined,
-          const Color(0xFFE24657), const Color(0xFFFDE7EA), () => _comingSoon('Parcel Delivery'),
-          soon: true),
-      _Service('Events & Tours', Icons.celebration_outlined,
-          const Color(0xFF0FA898), const Color(0xFFD9F5F0), () => _comingSoon('Events & Tours')),
-    ];
-
     return BlocListener<PlacesCubit, PlacesState>(
       listenWhen: (p, c) => p.hubs != c.hubs,
       listener: (context, state) => _refreshLive(state),
@@ -180,14 +160,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         .titleMedium
                         ?.copyWith(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 11,
-                  crossAxisSpacing: 11,
-                  childAspectRatio: 1.55,
-                  children: [for (final s in services) _ServiceTile(service: s)],
+                _ServiceGrid(
+                  onOpenSearch: widget.onOpenSearch,
+                  onComingSoon: _comingSoon,
                 ),
                 const SizedBox(height: 24),
                 const _LiveNearYouHeader(),
@@ -796,6 +771,96 @@ class _TrustCell extends StatelessWidget {
               style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline)),
         ],
       ),
+    );
+  }
+}
+
+/// Symbolic icon names (from the /categories catalog) → Flutter icons.
+IconData _categoryIcon(String name) => switch (name) {
+      'briefcase' => Icons.work_outline_rounded,
+      'road' => Icons.alt_route_rounded,
+      'school' => Icons.school_outlined,
+      'female' => Icons.favorite_outline_rounded,
+      'flight' => Icons.flight_rounded,
+      'business' => Icons.business_rounded,
+      'celebration' => Icons.celebration_outlined,
+      'car_rental' => Icons.car_rental_rounded,
+      'package' => Icons.local_shipping_outlined,
+      _ => Icons.directions_car_rounded,
+    };
+
+/// Brand accent + tint per category key, matching the Yango palette.
+(Color, Color) _categoryColors(String key) => switch (key) {
+      'office' => (const Color(0xFFFF3B30), const Color(0xFFFFECEB)),
+      'city' => (const Color(0xFF1E88D6), const Color(0xFFE1F1FD)),
+      'school' => (const Color(0xFFE19700), const Color(0xFFFFF3D6)),
+      'ladies' => (const Color(0xFFD6488B), const Color(0xFFFCE7F0)),
+      'airport' => (const Color(0xFF3B72E0), const Color(0xFFE4EEFE)),
+      'corporate' => (const Color(0xFF7C5AE0), const Color(0xFFEDE9FD)),
+      'events' => (const Color(0xFF0FA898), const Color(0xFFD9F5F0)),
+      'rentacar' => (const Color(0xFF12A46B), const Color(0xFFDFF6EC)),
+      'parcel' => (const Color(0xFFE24657), const Color(0xFFFDE7EA)),
+      _ => (const Color(0xFFFF3B30), const Color(0xFFFFECEB)),
+    };
+
+/// Static mirror of the backend catalog — the grid always renders, even before
+/// (or without) a network round-trip.
+const _fallbackCategories = <Category>[
+  Category(key: 'office', label: 'Office Commute', tagline: 'Daily ride to work', icon: 'briefcase', active: true, comingSoon: false, sort: 1),
+  Category(key: 'city', label: 'Intercity', tagline: 'Between cities', icon: 'road', active: true, comingSoon: false, sort: 2),
+  Category(key: 'school', label: 'School Van', tagline: 'Safe school pickup', icon: 'school', active: true, comingSoon: false, sort: 3),
+  Category(key: 'ladies', label: 'Ladies Only', tagline: 'Women-only rides', icon: 'female', active: true, comingSoon: false, sort: 4),
+  Category(key: 'airport', label: 'Airport', tagline: 'To & from the airport', icon: 'flight', active: true, comingSoon: false, sort: 5),
+  Category(key: 'corporate', label: 'Corporate', tagline: 'Company fleets', icon: 'business', active: true, comingSoon: false, sort: 6),
+  Category(key: 'events', label: 'Events', tagline: 'Weddings & occasions', icon: 'celebration', active: true, comingSoon: false, sort: 7),
+  Category(key: 'rentacar', label: 'Rent a Car', tagline: 'With or without driver', icon: 'car_rental', active: false, comingSoon: true, sort: 8),
+  Category(key: 'parcel', label: 'Parcel', tagline: 'Send packages', icon: 'package', active: false, comingSoon: true, sort: 9),
+];
+
+/// The service grid — dynamic from /categories, falling back to the static
+/// catalog while loading or offline.
+class _ServiceGrid extends StatelessWidget {
+  const _ServiceGrid({required this.onOpenSearch, required this.onComingSoon});
+  final void Function({bool ladiesOnly, String? vertical}) onOpenSearch;
+  final void Function(String label) onComingSoon;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CategoriesCubit, CategoriesState>(
+      builder: (context, state) {
+        final items = state is CategoriesLoaded && state.items.isNotEmpty
+            ? state.items
+            : _fallbackCategories;
+        return GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 11,
+          crossAxisSpacing: 11,
+          childAspectRatio: 1.55,
+          children: [
+            for (final c in items)
+              _ServiceTile(
+                service: _serviceFrom(c),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  _Service _serviceFrom(Category c) {
+    final (color, tint) = _categoryColors(c.key);
+    final available = c.active && !c.comingSoon;
+    return _Service(
+      c.label,
+      _categoryIcon(c.icon),
+      color,
+      tint,
+      available
+          ? () => onOpenSearch(vertical: c.key, ladiesOnly: c.key == 'ladies')
+          : () => onComingSoon(c.label),
+      soon: c.comingSoon,
     );
   }
 }

@@ -26,6 +26,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
 
+  // Category filter carried from a dashboard tile into the Search tab.
+  String? _searchVertical;
+  bool _searchLadies = false;
+
   bool get _isDriver => widget.user.isDriver;
 
   @override
@@ -58,8 +62,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final body = _tab == homeIndex
         ? DashboardScreen(
             user: widget.user,
-            onOpenSearch: ({bool ladiesOnly = false}) =>
-                setState(() => _tab = searchIndex),
+            onOpenSearch: ({bool ladiesOnly = false, String? vertical}) =>
+                setState(() {
+                  _tab = searchIndex;
+                  _searchVertical = vertical;
+                  _searchLadies = ladiesOnly;
+                }),
             onOpenBookings: () {
               setState(() => _tab = bookingsIndex);
               context.read<MyBookingsBloc>().add(const MyBookingsRequested());
@@ -71,7 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           )
         : _tab == searchIndex
-            ? const SearchScreen()
+            ? SearchScreen(
+                initialVertical: _searchVertical, initialLadiesOnly: _searchLadies)
             : _tab == driveIndex
                 ? const DriveScreen()
                 : _tab == bookingsIndex
@@ -86,7 +95,14 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) {
-          setState(() => _tab = i);
+          setState(() {
+            _tab = i;
+            // Tapping Search directly clears any category filter carried in.
+            if (i == searchIndex) {
+              _searchVertical = null;
+              _searchLadies = false;
+            }
+          });
           if (i == driveIndex) {
             context.read<MyRidesCubit>().load();
             context.read<EarningsCubit>().load();

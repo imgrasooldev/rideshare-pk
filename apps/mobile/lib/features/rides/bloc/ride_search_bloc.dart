@@ -20,6 +20,7 @@ final class RideSearchSubmitted extends RideSearchEvent {
     required this.day,
     this.ladiesOnly = false,
     this.vehicleType,
+    this.vertical,
   });
 
   final Hub pickup;
@@ -28,9 +29,12 @@ final class RideSearchSubmitted extends RideSearchEvent {
   final bool ladiesOnly;
   /// null = any vehicle type.
   final String? vehicleType;
+  /// null = any category; otherwise a ride `vertical` (e.g. 'office', 'city').
+  final String? vertical;
 
   @override
-  List<Object?> get props => [pickup.label, drop.label, day, ladiesOnly, vehicleType];
+  List<Object?> get props =>
+      [pickup.label, drop.label, day, ladiesOnly, vehicleType, vertical];
 }
 
 final class RideSearchNextPageRequested extends RideSearchEvent {
@@ -113,6 +117,7 @@ class RideSearchBloc extends Bloc<RideSearchEvent, RideSearchState> {
         departBefore: before,
         ladiesOnly: event.ladiesOnly ? true : null,
         vehicleType: event.vehicleType,
+        vertical: event.vertical,
       );
       emit(RideSearchLoaded(rides: page.items, query: event, nextCursor: page.nextCursor));
     } on ApiException catch (e) {
@@ -133,6 +138,7 @@ class RideSearchBloc extends Bloc<RideSearchEvent, RideSearchState> {
         departBefore: before,
         ladiesOnly: current.query.ladiesOnly ? true : null,
         vehicleType: current.query.vehicleType,
+        vertical: current.query.vertical,
         cursor: current.nextCursor,
       );
       emit(current.copyWith(

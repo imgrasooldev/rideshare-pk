@@ -53,10 +53,12 @@ class RidesRepository {
     double radiusKm = 3,
     bool? ladiesOnly,
     String? vehicleType,
+    String? vertical,
     String? cursor,
   }) async {
     final res = await _api.get('/rides/search', query: {
       'vehicleType': ?vehicleType,
+      'vertical': ?vertical,
       'pickupLat': pickup.lat,
       'pickupLng': pickup.lng,
       'dropLat': drop.lat,
