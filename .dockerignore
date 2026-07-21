@@ -1,8 +1,16 @@
 node_modules
 **/node_modules
 **/dist
+**/build
+**/.dart_tool
+**/.gradle
+**/.kotlin
+**/.next
+**/out
 .git
 .github
 .env
 *.log
+# The Flutter app is not part of the server image (backend + admin only).
+apps/mobile
 apps/web
