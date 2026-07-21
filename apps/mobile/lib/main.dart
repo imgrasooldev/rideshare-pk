@@ -12,6 +12,8 @@ import 'features/bookings/bloc/my_bookings_bloc.dart';
 import 'features/bookings/data/bookings_repository.dart';
 import 'features/driver/bloc/my_rides_cubit.dart';
 import 'features/driver/bloc/post_ride_cubit.dart';
+import 'features/places/bloc/places_cubit.dart';
+import 'features/places/data/places_repository.dart';
 import 'features/profile/bloc/profile_cubit.dart';
 import 'features/rides/bloc/ride_search_bloc.dart';
 import 'features/rides/data/rides_repository.dart';
@@ -37,6 +39,7 @@ void main() {
       providers: [
         RepositoryProvider.value(value: authRepository),
         RepositoryProvider(create: (_) => RidesRepository(api)),
+        RepositoryProvider(create: (_) => PlacesRepository(api)),
         RepositoryProvider(create: (_) => BookingsRepository(api)),
         RepositoryProvider(create: (_) => VehiclesRepository(api)),
         RepositoryProvider(create: (_) => TrustRepository(api)),
@@ -53,6 +56,7 @@ void main() {
             },
           ),
           BlocProvider(create: (context) => RideSearchBloc(context.read<RidesRepository>())),
+          BlocProvider(create: (context) => PlacesCubit(context.read<PlacesRepository>())),
           BlocProvider(create: (context) => MyBookingsBloc(context.read<BookingsRepository>())),
           BlocProvider(create: (context) => BookingActionCubit(context.read<BookingsRepository>())),
           BlocProvider(create: (context) => MyRidesCubit(context.read<RidesRepository>())),

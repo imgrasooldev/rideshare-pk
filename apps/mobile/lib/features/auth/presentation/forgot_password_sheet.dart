@@ -8,6 +8,7 @@ Future<void> showForgotPasswordSheet(BuildContext context) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
+    showDragHandle: true,
     builder: (_) => BlocProvider(
       create: (_) => ForgotPasswordCubit(context.read<AuthRepository>()),
       child: const _ForgotPasswordFlow(),
@@ -70,7 +71,8 @@ class _ForgotPasswordFlowState extends State<_ForgotPasswordFlow> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Reset password', style: theme.textTheme.titleLarge),
+              Text('Reset password',
+                  style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
               Text(
                 sent

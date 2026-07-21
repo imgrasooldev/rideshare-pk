@@ -6,6 +6,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../bookings/bloc/booking_action_cubit.dart';
+import '../../places/bloc/places_cubit.dart';
 import '../bloc/ride_search_bloc.dart';
 import '../data/models/ride.dart';
 import '../data/rides_repository.dart';
@@ -18,16 +19,19 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  Hub _pickup = lahoreHubs[1]; // DHA Phase 5
-  Hub _drop = lahoreHubs[0]; // Gulberg
+  Hub? _pickup;
+  Hub? _drop;
   DateTime _day = DateTime.now().add(const Duration(days: 1));
   bool _ladiesOnly = false;
   String? _vehicleType; // null = any
 
   void _search() {
+    final pickup = _pickup;
+    final drop = _drop;
+    if (pickup == null || drop == null) return;
     context.read<RideSearchBloc>().add(RideSearchSubmitted(
-          pickup: _pickup,
-          drop: _drop,
+          pickup: pickup,
+          drop: drop,
           day: _day,
           ladiesOnly: _ladiesOnly,
           vehicleType: _vehicleType,
@@ -46,6 +50,19 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hubs = context.watch<PlacesCubit>().state.hubs;
+    if (hubs.isEmpty) {
+      return const Center(
+        child: Padding(padding: EdgeInsets.all(48), child: CircularProgressIndicator()),
+      );
+    }
+    // Default (or reset on city switch) to the loaded hubs.
+    if (_pickup == null || !hubs.contains(_pickup)) {
+      _pickup = hubs.length > 1 ? hubs[1] : hubs.first;
+    }
+    if (_drop == null || !hubs.contains(_drop)) {
+      _drop = hubs.first;
+    }
     return BlocListener<BookingActionCubit, BookingActionState>(
       listener: (context, state) {
         final messenger = ScaffoldMessenger.of(context);
@@ -68,8 +85,9 @@ class _SearchScreenState extends State<SearchScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           _SearchForm(
-            pickup: _pickup,
-            drop: _drop,
+            hubs: hubs,
+            pickup: _pickup!,
+            drop: _drop!,
             day: _day,
             ladiesOnly: _ladiesOnly,
             onPickup: (h) => setState(() => _pickup = h),
@@ -150,6 +168,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
 class _SearchForm extends StatelessWidget {
   const _SearchForm({
+    required this.hubs,
     required this.pickup,
     required this.drop,
     required this.day,
@@ -162,6 +181,7 @@ class _SearchForm extends StatelessWidget {
     required this.onSearch,
   });
 
+  final List<Hub> hubs;
   final Hub pickup;
   final Hub drop;
   final DateTime day;
@@ -198,9 +218,9 @@ class _SearchForm extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      _HubDropdown(label: 'Pickup', value: pickup, onChanged: onPickup),
+                      _HubDropdown(label: 'Pickup', value: pickup, hubs: hubs, onChanged: onPickup),
                       const SizedBox(height: 12),
-                      _HubDropdown(label: 'Drop-off', value: drop, onChanged: onDrop),
+                      _HubDropdown(label: 'Drop-off', value: drop, hubs: hubs, onChanged: onDrop),
                     ],
                   ),
                 ),
@@ -244,10 +264,16 @@ class _SearchForm extends StatelessWidget {
 }
 
 class _HubDropdown extends StatelessWidget {
-  const _HubDropdown({required this.label, required this.value, required this.onChanged});
+  const _HubDropdown({
+    required this.label,
+    required this.value,
+    required this.hubs,
+    required this.onChanged,
+  });
 
   final String label;
   final Hub value;
+  final List<Hub> hubs;
   final ValueChanged<Hub> onChanged;
 
   @override
@@ -261,7 +287,7 @@ class _HubDropdown extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       items: [
-        for (final hub in lahoreHubs)
+        for (final hub in hubs)
           DropdownMenuItem(value: hub, child: Text(hub.label, overflow: TextOverflow.ellipsis)),
       ],
       onChanged: (h) {

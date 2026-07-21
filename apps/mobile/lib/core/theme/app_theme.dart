@@ -4,15 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 /// Design tokens for the whole platform. One source of truth: screens never
 /// hard-code colors, radii, or text styles — they read the theme.
 abstract final class AppTheme {
-  /// Uber/Yango-class identity: jet-black foundation + vivid signal orange.
-  static const seed = Color(0xFFF97316);
+  /// Yango-class identity: clean light canvas + bold Yango red.
+  static const seed = Color(0xFFFF3B30);
 
-  /// Punchier primary than M3's tonal mapping would give us in light mode.
-  static const _primaryLight = Color(0xFFEA580C);
+  /// Vivid Yango red primary — punchier than M3's tonal mapping.
+  static const _primaryLight = Color(0xFFFF3B30);
 
-  /// Jet-black brand surfaces (login backdrop, hero headers).
-  static const ink = Color(0xFF09090B);
-  static const inkWarm = Color(0xFF26160C);
+  /// Deep brand surfaces (login backdrop, hero headers).
+  static const ink = Color(0xFF14151A);
+  static const inkWarm = Color(0xFF2A0E0C);
 
   static const radiusCard = 20.0;
   static const radiusField = 14.0;
@@ -23,7 +23,9 @@ abstract final class AppTheme {
   static ThemeData _build(Brightness brightness) {
     final isLight = brightness == Brightness.light;
     var scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
-    if (isLight) scheme = scheme.copyWith(primary: _primaryLight);
+    if (isLight) {
+      scheme = scheme.copyWith(primary: _primaryLight, onPrimary: Colors.white);
+    }
     final base = ThemeData(useMaterial3: true, colorScheme: scheme);
     final text = GoogleFonts.plusJakartaSansTextTheme(base.textTheme).apply(
       bodyColor: scheme.onSurface,
@@ -32,7 +34,7 @@ abstract final class AppTheme {
 
     return base.copyWith(
       textTheme: text,
-      scaffoldBackgroundColor: isLight ? const Color(0xFFF4F7F5) : const Color(0xFF101413),
+      scaffoldBackgroundColor: isLight ? const Color(0xFFF2F3F5) : const Color(0xFF121317),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
