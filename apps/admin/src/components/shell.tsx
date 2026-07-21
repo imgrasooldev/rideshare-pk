@@ -11,6 +11,7 @@ import {
   Users as UsersIcon
 } from "lucide-react";
 import { ApiError, clearSession, currentUser, type User } from "@/lib/api";
+import { ThemeToggle } from "@/components/theme";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -64,13 +65,13 @@ export default function Shell({
 
   if (denied) {
     return (
-      <div className="grid min-h-screen place-items-center bg-page p-6">
-        <div className="card-soft w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center">
-          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600">
+      <div className="grid min-h-screen place-items-center bg-page p-6 dark:bg-[#08080c]">
+        <div className="card-soft w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center dark:border-white/10 dark:bg-white/[0.04]">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/15">
             <ShieldCheck size={26} />
           </div>
-          <h1 className="text-lg font-bold">Admin access required</h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <h1 className="text-lg font-bold dark:text-white">Admin access required</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {user.email ?? user.phone} isn&apos;t an admin. Grant access with
             scripts/make-admin.mjs, then sign in again.
           </p>
@@ -160,20 +161,23 @@ export default function Shell({
       </aside>
 
       <div className="ml-64 flex-1">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-page/80 px-8 py-4 backdrop-blur-xl">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-page/80 px-8 py-4 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[#08080c]/80">
           <div>
-            <h1 className="text-[18px] font-bold tracking-tight text-slate-900">{title}</h1>
-            {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+            <h1 className="text-[18px] font-bold tracking-tight text-slate-900 dark:text-white">{title}</h1>
+            {subtitle && <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">{subtitle}</p>}
           </div>
-          <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 sm:flex">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            Live
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 sm:flex dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              Live
+            </div>
+            <ThemeToggle />
           </div>
         </header>
-        <main className="p-8">{children}</main>
+        <main className="glow-red p-8">{children}</main>
       </div>
     </div>
   );

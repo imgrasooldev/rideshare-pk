@@ -1,11 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
-import { Car, KeyRound, Mail, Phone } from "lucide-react";
+import { ArrowRight, Bug, Car, Mail, Phone } from "lucide-react";
 import { api, ApiError, saveSession, type User } from "@/lib/api";
+import { ThemeToggle } from "@/components/theme";
 
 export default function LoginPage() {
-  const [method, setMethod] = useState<"email" | "phone">("email");
+  const [method, setMethod] = useState<"email" | "phone">("phone");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
@@ -21,7 +22,6 @@ export default function LoginPage() {
     try {
       const res = await fn();
       saveSession(res.accessToken, res.user);
-      // Hard navigation: reliable regardless of static-export router quirks.
       window.location.assign("/admin/");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Something went wrong");
@@ -45,30 +45,122 @@ export default function LoginPage() {
   }
 
   const input =
-    "w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20";
+    "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:placeholder:text-slate-500";
   const tab = (active: boolean) =>
     `flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
-      active ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+      active
+        ? "bg-white text-slate-900 shadow-sm dark:bg-white/[0.1] dark:text-white"
+        : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
     }`;
+  const btn =
+    "flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 py-3 text-sm font-bold text-white shadow-[0_16px_30px_-12px_rgba(232,30,45,0.6)] transition hover:brightness-110 disabled:opacity-50";
 
   return (
-    <div className="grid min-h-screen place-items-center bg-gradient-to-br from-[#09090b] via-[#151517] to-[#26160c] p-6">
-      <div className="w-full max-w-105">
-        <div className="mb-6 text-center text-white">
-          <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-brand-500 text-white shadow-[0_0_44px_rgba(249,115,22,0.5)]">
-            <Car size={26} />
+    <div className="grid min-h-screen lg:grid-cols-[1.15fr_1fr]">
+      {/* Command-center map panel (always dark) */}
+      <div className="relative hidden overflow-hidden bg-[#0a0a10] p-8 lg:block">
+        <div className="mapgrid absolute inset-0 opacity-60 [mask-image:radial-gradient(80%_80%_at_50%_40%,#000,transparent)]" />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(50% 40% at 20% 8%, rgba(255,59,48,0.14), transparent 60%), radial-gradient(45% 40% at 85% 90%, rgba(139,108,255,0.10), transparent 60%)"
+          }}
+        />
+        <div className="relative flex items-center gap-3 text-white">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 shadow-[0_10px_24px_-6px_rgba(232,30,45,0.7)]">
+            <Car size={20} />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Rideshare PK</h1>
-          <p className="text-sm text-white/70">Operations console</p>
+          <div className="text-[15px] font-bold tracking-tight">Rideshare PK</div>
         </div>
 
-        <div className="card-soft rounded-2xl bg-white p-7">
-          <div className="mb-5 flex rounded-xl bg-slate-100 p-1">
-            <button className={tab(method === "email")} onClick={() => setMethod("email")}>
-              <Mail size={15} /> Email
-            </button>
+        <svg viewBox="0 0 520 420" className="absolute inset-0 h-full w-full">
+          <defs>
+            <linearGradient id="route" x1="0" x2="1">
+              <stop offset="0" stopColor="#ff3b30" stopOpacity="0.15" />
+              <stop offset="1" stopColor="#ff3b30" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M120 320 C 220 250, 300 270, 380 160"
+            fill="none"
+            stroke="url(#route)"
+            strokeWidth="2.5"
+            strokeDasharray="6 8"
+          >
+            <animate attributeName="stroke-dashoffset" from="140" to="0" dur="3s" repeatCount="indefinite" />
+          </path>
+          <path
+            d="M380 160 C 300 120, 250 130, 150 145"
+            fill="none"
+            stroke="url(#route)"
+            strokeWidth="2"
+            strokeDasharray="5 9"
+            opacity="0.8"
+          >
+            <animate attributeName="stroke-dashoffset" from="0" to="120" dur="4s" repeatCount="indefinite" />
+          </path>
+          <g>
+            <circle cx="120" cy="320" r="6" fill="#ff3b30" />
+            <circle cx="120" cy="320" r="6" fill="#ff3b30" opacity="0.5">
+              <animate attributeName="r" from="6" to="20" dur="2.4s" repeatCount="indefinite" />
+              <animate attributeName="opacity" from="0.5" to="0" dur="2.4s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="380" cy="160" r="6" fill="#ff3b30" />
+            <circle cx="380" cy="160" r="6" fill="#ff3b30" opacity="0.5">
+              <animate attributeName="r" from="6" to="18" dur="2.4s" begin="0.8s" repeatCount="indefinite" />
+              <animate attributeName="opacity" from="0.5" to="0" dur="2.4s" begin="0.8s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="150" cy="145" r="5" fill="#ff6a5e" />
+          </g>
+        </svg>
+
+        <div className="absolute left-[28%] top-[36%] rounded-full border border-white/10 bg-black/40 px-3 py-1.5 font-mono text-[10.5px] text-white backdrop-blur">
+          142 rides live
+        </div>
+        <div className="absolute left-[60%] top-[58%] rounded-full border border-white/10 bg-black/40 px-3 py-1.5 font-mono text-[10.5px] text-white backdrop-blur">
+          3 cities
+        </div>
+
+        <div className="absolute inset-x-8 bottom-8">
+          <h2 className="text-[26px] font-bold leading-tight tracking-tight text-white">
+            Operations, in real time.
+          </h2>
+          <p className="mt-1.5 text-sm text-slate-400">
+            Karachi · Lahore · Islamabad — every corridor, live.
+          </p>
+        </div>
+      </div>
+
+      {/* Form panel */}
+      <div className="relative flex items-center justify-center bg-white px-6 py-12 dark:bg-[#0b0b0f]">
+        <div className="absolute right-6 top-6">
+          <ThemeToggle />
+        </div>
+        <div className="w-full max-w-sm">
+          <div className="mb-8 lg:hidden">
+            <div className="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white">
+              <Car size={22} />
+            </div>
+            <div className="text-lg font-bold dark:text-white">Rideshare PK</div>
+          </div>
+
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+            Admin access
+          </p>
+          <h1 className="mt-2 text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Welcome back
+          </h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Sign in to the operations console
+          </p>
+
+          <div className="mt-6 mb-5 flex rounded-xl bg-slate-100 p-1 dark:bg-white/[0.05]">
             <button className={tab(method === "phone")} onClick={() => setMethod("phone")}>
               <Phone size={15} /> Phone
+            </button>
+            <button className={tab(method === "email")} onClick={() => setMethod("email")}>
+              <Mail size={15} /> Email
             </button>
           </div>
 
@@ -94,11 +186,8 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              {error && <p className="text-center text-sm text-red-600">{error}</p>}
-              <button
-                className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
-                disabled={busy}
-              >
+              {error && <p className="text-center text-sm text-brand-600">{error}</p>}
+              <button className={btn} disabled={busy}>
                 {busy ? "Signing in…" : "Sign in"}
               </button>
             </form>
@@ -116,12 +205,10 @@ export default function LoginPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
-              {error && <p className="text-center text-sm text-red-600">{error}</p>}
-              <button
-                className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
-                disabled={busy}
-              >
+              {error && <p className="text-center text-sm text-brand-600">{error}</p>}
+              <button className={btn} disabled={busy}>
                 {busy ? "Sending…" : "Send code"}
+                {!busy && <ArrowRight size={16} />}
               </button>
             </form>
           ) : (
@@ -133,8 +220,8 @@ export default function LoginPage() {
               }}
             >
               {devCode && (
-                <p className="flex items-center justify-center gap-1.5 rounded-lg bg-amber-50 py-2 text-center text-xs font-semibold text-amber-700">
-                  <KeyRound size={13} /> Dev code: {devCode}
+                <p className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 py-2 text-center text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                  <Bug size={13} /> Dev code: {devCode}
                 </p>
               )}
               <input
@@ -144,17 +231,14 @@ export default function LoginPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
               />
-              {error && <p className="text-center text-sm text-red-600">{error}</p>}
-              <button
-                className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
-                disabled={busy}
-              >
+              {error && <p className="text-center text-sm text-brand-600">{error}</p>}
+              <button className={btn} disabled={busy}>
                 {busy ? "Verifying…" : "Verify"}
               </button>
             </form>
           )}
 
-          <p className="mt-5 text-center text-xs text-slate-400">
+          <p className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500">
             Admin access only — regular accounts are rejected.
           </p>
         </div>
@@ -162,4 +246,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
