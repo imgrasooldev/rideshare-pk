@@ -28,7 +28,7 @@ export function initials(user: User): string {
     .join("");
 }
 
-/** Auth-guarded Metronic-style shell: dark sidebar + white topbar. */
+/** Auth-guarded console shell: refined dark sidebar + glassy topbar. */
 export default function Shell({
   title,
   subtitle,
@@ -65,17 +65,17 @@ export default function Shell({
   if (denied) {
     return (
       <div className="grid min-h-screen place-items-center bg-page p-6">
-        <div className="card-soft w-full max-w-md rounded-2xl bg-white p-8 text-center">
-          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-full bg-red-50 text-2xl">
-            ⛔
+        <div className="card-soft w-full max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600">
+            <ShieldCheck size={26} />
           </div>
-          <h1 className="text-lg font-bold">Not an admin</h1>
+          <h1 className="text-lg font-bold">Admin access required</h1>
           <p className="mt-2 text-sm text-slate-500">
-            {user.email ?? user.phone} has no admin access. Grant it with
+            {user.email ?? user.phone} isn&apos;t an admin. Grant access with
             scripts/make-admin.mjs, then sign in again.
           </p>
           <button
-            className="mt-6 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700"
+            className="mt-6 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700"
             onClick={() => {
               clearSession();
               window.location.assign("/admin/login/");
@@ -90,17 +90,21 @@ export default function Shell({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="fixed inset-y-0 flex w-64 flex-col bg-sidebar text-slate-300">
-        <div className="flex items-center gap-3 px-6 py-6">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500 text-white">
+      <aside className="fixed inset-y-0 z-20 flex w-64 flex-col border-r border-white/[0.06] bg-sidebar text-slate-300">
+        <div className="flex items-center gap-3 px-5 py-6">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-[0_8px_20px_-6px_rgba(232,30,45,0.7)]">
             <Car size={20} />
           </div>
           <div>
-            <div className="text-[15px] font-bold text-white">Rideshare PK</div>
-            <div className="text-xs text-slate-500">Operations console</div>
+            <div className="text-[15px] font-bold tracking-tight text-white">Rideshare PK</div>
+            <div className="text-[11px] font-medium text-slate-500">Operations console</div>
           </div>
         </div>
-        <nav className="mt-2 flex-1 space-y-1 px-3">
+
+        <div className="px-6 pb-2 pt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-600">
+          Menu
+        </div>
+        <nav className="flex-1 space-y-1 px-3">
           {NAV.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -109,50 +113,65 @@ export default function Shell({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                   active
-                    ? "bg-brand-400/15 text-white"
-                    : "hover:bg-sidebar-hover hover:text-white"
+                    ? "bg-white/[0.06] text-white"
+                    : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
                 }`}
               >
-                <Icon size={18} className={active ? "text-brand-400" : ""} />
+                {active && (
+                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-500" />
+                )}
+                <Icon
+                  size={18}
+                  className={active ? "text-brand-500" : "text-slate-500 group-hover:text-slate-300"}
+                />
                 {item.label}
-                {active && <span className="ml-auto h-5 w-1 rounded-full bg-brand-400" />}
               </Link>
             );
           })}
         </nav>
-        <div className="border-t border-white/5 p-4">
+
+        <div className="m-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-400/20 text-sm font-bold text-brand-400">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-600 text-sm font-bold text-white">
               {initials(user)}
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold text-white">
                 {user.name ?? "Admin"}
               </div>
-              <div className="truncate text-xs text-slate-500">
+              <div className="truncate text-[11px] text-slate-500">
                 {user.email ?? user.phone}
               </div>
             </div>
             <button
               title="Log out"
-              className="text-slate-500 hover:text-white"
+              className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition hover:bg-white/[0.06] hover:text-white"
               onClick={() => {
                 clearSession();
                 window.location.assign("/admin/login/");
               }}
             >
-              <LogOut size={17} />
+              <LogOut size={16} />
             </button>
           </div>
         </div>
       </aside>
 
       <div className="ml-64 flex-1">
-        <header className="sticky top-0 z-10 border-b border-slate-200/70 bg-white/80 px-8 py-4 backdrop-blur">
-          <h1 className="text-lg font-bold text-slate-800">{title}</h1>
-          {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/70 bg-page/80 px-8 py-4 backdrop-blur-xl">
+          <div>
+            <h1 className="text-[18px] font-bold tracking-tight text-slate-900">{title}</h1>
+            {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
+          </div>
+          <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-500 sm:flex">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            Live
+          </div>
         </header>
         <main className="p-8">{children}</main>
       </div>

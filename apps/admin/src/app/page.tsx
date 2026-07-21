@@ -76,9 +76,23 @@ export default function DashboardPage() {
           </div>
 
           <Card className="mt-6 p-6">
-            <div className="mb-1 flex items-baseline justify-between">
-              <h2 className="text-[15px] font-bold text-slate-800">Activity — last 14 days</h2>
-              <span className="text-xs text-slate-400">signups · rides · bookings</span>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-[15px] font-bold text-slate-900">Activity</h2>
+                <p className="text-xs text-slate-400">Signups, rides and bookings — last 14 days</p>
+              </div>
+              <div className="flex items-center gap-4">
+                {[
+                  { c: "#38bdf8", l: "Signups" },
+                  { c: "#ff3b30", l: "Rides" },
+                  { c: "#8b5cf6", l: "Bookings" }
+                ].map((x) => (
+                  <span key={x.l} className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                    <span className="h-2 w-2 rounded-full" style={{ background: x.c }} />
+                    {x.l}
+                  </span>
+                ))}
+              </div>
             </div>
             {!series || series.length === 0 ? (
               <Empty message="No activity data yet." />
@@ -92,8 +106,8 @@ export default function DashboardPage() {
                         <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gRides" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#f97316" stopOpacity={0.25} />
-                        <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#ff3b30" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#ff3b30" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="gBookings" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.25} />
@@ -132,7 +146,7 @@ export default function DashboardPage() {
                     <Area
                       type="monotone"
                       dataKey="rides"
-                      stroke="#f97316"
+                      stroke="#ff3b30"
                       strokeWidth={2}
                       fill="url(#gRides)"
                     />
