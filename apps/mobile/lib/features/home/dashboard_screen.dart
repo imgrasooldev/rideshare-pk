@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../auth/data/models/user.dart';
 import '../bookings/bloc/my_bookings_bloc.dart';
+import '../driver/presentation/become_driver_screen.dart';
 import '../notifications/bloc/notifications_cubit.dart';
 import '../notifications/presentation/notifications_screen.dart';
 import '../places/bloc/places_cubit.dart';
@@ -164,6 +165,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (!widget.user.verified) _VerifyBanner(onTap: widget.onOpenProfile),
                 _NextRideCard(onTap: widget.onOpenBookings),
                 const _StatsStrip(),
+                if (!widget.user.isDriver) ...[
+                  const SizedBox(height: 12),
+                  _OfferCarCard(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const BecomeDriverScreen()),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 22),
                 Text('All services',
                     style: Theme.of(context)
@@ -512,6 +521,61 @@ class _StatsStrip extends StatelessWidget {
         const SizedBox(width: 8),
         const Expanded(child: _TrustCell(value: 'Cash', label: 'No wallet')),
       ],
+    );
+  }
+}
+
+/// Rider → provider entry: offer your own car for carpooling.
+class _OfferCarCard extends StatelessWidget {
+  const _OfferCarCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    return Material(
+      color: theme.cardColor,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: primary.withValues(alpha: 0.25)),
+            gradient: LinearGradient(
+              colors: [primary.withValues(alpha: 0.07), primary.withValues(alpha: 0.02)],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(13)),
+                child: Icon(Icons.directions_car_filled_rounded, color: primary, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Offer your car',
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 2),
+                    Text('Earn by sharing your daily commute',
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_rounded, color: primary, size: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
