@@ -7,6 +7,7 @@ import '../../rides/data/rides_repository.dart'
     show vehicleTypeIcon, vehicleTypeLabel, vehicleTypes;
 import '../../trust/bloc/verifications_cubit.dart';
 import '../../vehicles/bloc/vehicles_cubit.dart';
+import '../../subscriptions/presentation/subscriptions_screen.dart';
 import '../bloc/profile_cubit.dart';
 import 'edit_profile_sheet.dart';
 
@@ -122,6 +123,18 @@ class ProfileScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: const _VehiclesSection(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(Icons.event_repeat_rounded, color: theme.colorScheme.primary),
+              title: const Text('My subscriptions'),
+              subtitle: const Text("Monthly routes you're subscribed to"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SubscriptionsScreen()),
+              ),
             ),
           ),
           const SizedBox(height: 24),

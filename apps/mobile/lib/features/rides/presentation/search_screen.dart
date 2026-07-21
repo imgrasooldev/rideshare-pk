@@ -5,8 +5,10 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
+import '../../../core/network/api_exception.dart';
 import '../../bookings/bloc/booking_action_cubit.dart';
 import '../../places/bloc/places_cubit.dart';
+import '../../subscriptions/data/subscriptions_repository.dart';
 import '../bloc/ride_search_bloc.dart';
 import '../data/models/ride.dart';
 import '../data/rides_repository.dart';
@@ -402,9 +404,35 @@ class _RideCard extends StatelessWidget {
                         : 'Full'),
               ),
             ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _subscribeMonthly(context, ride),
+                icon: const Icon(Icons.event_repeat_rounded, size: 18),
+                label: const Text('Subscribe monthly'),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Turn a daily route into a monthly subscription — no more booking each morning.
+Future<void> _subscribeMonthly(BuildContext context, Ride ride) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final repo = context.read<SubscriptionsRepository>();
+  try {
+    final sub = await repo.subscribe(ride.id);
+    messenger.showSnackBar(SnackBar(
+      content: Text('Subscribed — Rs ${sub.pricePerMonth}/month'),
+      backgroundColor: Colors.green.shade700,
+    ));
+  } on ApiException catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(e.message)));
+  } catch (_) {
+    messenger.showSnackBar(const SnackBar(content: Text('Could not subscribe')));
   }
 }

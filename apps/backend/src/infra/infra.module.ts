@@ -20,6 +20,7 @@ import {
   IDENTITY_REPOSITORY,
   KV_STORE,
   NOTIFICATION_REPOSITORY,
+  SUBSCRIPTION_REPOSITORY,
   PG_POOL,
   RATING_REPOSITORY,
   RIDE_REPOSITORY,
@@ -33,6 +34,10 @@ import {
   InMemoryNotificationRepository,
   PgNotificationRepository
 } from "../notifications/notifications.repo.js";
+import {
+  InMemorySubscriptionRepository,
+  PgSubscriptionRepository
+} from "../subscriptions/subscriptions.repo.js";
 import { InMemoryTripRepository, PgTripRepository } from "../tracking/trips.repo.js";
 import { InMemorySafetyRepository, PgSafetyRepository } from "../trust/safety.repo.js";
 import { InMemoryVerificationRepository, PgVerificationRepository } from "../trust/verifications.repo.js";
@@ -124,6 +129,12 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
         pool ? new PgNotificationRepository(pool) : new InMemoryNotificationRepository()
     },
     {
+      provide: SUBSCRIPTION_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgSubscriptionRepository(pool) : new InMemorySubscriptionRepository()
+    },
+    {
       provide: ADMIN_INSIGHTS,
       inject: [PG_POOL],
       useFactory: (pool: Pool | null) =>
@@ -143,7 +154,7 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
     APP_CONFIG, KV_STORE, PG_POOL, BUS, IDENTITY_REPOSITORY, ADMIN_INSIGHTS,
     USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY,
     BOOKING_REPOSITORY, TRIP_REPOSITORY, RATING_REPOSITORY, SAFETY_REPOSITORY,
-    NOTIFICATION_REPOSITORY
+    NOTIFICATION_REPOSITORY, SUBSCRIPTION_REPOSITORY
   ]
 })
 export class InfraModule {}
