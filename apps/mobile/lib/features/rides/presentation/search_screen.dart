@@ -8,6 +8,7 @@ import '../../../core/widgets/status_pill.dart';
 import '../../../core/network/api_exception.dart';
 import '../../bookings/bloc/booking_action_cubit.dart';
 import '../../categories/bloc/categories_cubit.dart';
+import '../../messages/presentation/chat_screen.dart';
 import '../../places/bloc/places_cubit.dart';
 import '../../subscriptions/data/subscriptions_repository.dart';
 import '../bloc/ride_search_bloc.dart';
@@ -468,13 +469,31 @@ class _RideCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _subscribeMonthly(context, ride),
-                icon: const Icon(Icons.event_repeat_rounded, size: 18),
-                label: const Text('Subscribe monthly'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _subscribeMonthly(context, ride),
+                    icon: const Icon(Icons.event_repeat_rounded, size: 18),
+                    label: const Text('Subscribe'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                      builder: (_) => ChatScreen(
+                        rideId: ride.id,
+                        otherId: ride.driverId,
+                        title: 'Driver',
+                        subtitle: '${ride.originLabel} → ${ride.destLabel}',
+                      ),
+                    )),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                    label: const Text('Message'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

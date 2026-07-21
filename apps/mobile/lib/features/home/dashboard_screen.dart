@@ -8,6 +8,8 @@ import '../bookings/bloc/my_bookings_bloc.dart';
 import '../categories/bloc/categories_cubit.dart';
 import '../categories/data/categories_repository.dart';
 import '../driver/presentation/become_driver_screen.dart';
+import '../messages/bloc/messages_unread_cubit.dart';
+import '../messages/presentation/inbox_screen.dart';
 import '../notifications/bloc/notifications_cubit.dart';
 import '../notifications/presentation/notifications_screen.dart';
 import '../places/bloc/places_cubit.dart';
@@ -55,6 +57,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context.read<MyBookingsBloc>().add(const MyBookingsRequested());
       // Load the notification bell's unread count.
       context.read<NotificationsCubit>().load();
+      // Load the chat unread badge.
+      context.read<MessagesUnreadCubit>().load();
     });
   }
 
@@ -248,6 +252,8 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  const _ChatButton(),
+                  const SizedBox(width: 10),
                   const _NotifBell(),
                   const SizedBox(width: 10),
                   Container(
@@ -280,6 +286,65 @@ class _Header extends StatelessWidget {
     );
   }
 
+}
+
+/// Header chat button — opens the conversations inbox with an unread badge.
+class _ChatButton extends StatelessWidget {
+  const _ChatButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const InboxScreen()),
+        );
+        if (context.mounted) context.read<MessagesUnreadCubit>().load();
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.chat_bubble_outline_rounded, size: 19, color: Colors.white),
+          ),
+          BlocBuilder<MessagesUnreadCubit, int>(
+            builder: (context, unread) {
+              if (unread == 0) return const SizedBox.shrink();
+              return Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFE81E2D), width: 1.5),
+                  ),
+                  child: Text(
+                    unread > 9 ? '9+' : '$unread',
+                    style: const TextStyle(
+                        color: Color(0xFFE81E2D),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        height: 1),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Header bell — opens the notification center and shows the unread count.
