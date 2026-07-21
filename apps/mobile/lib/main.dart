@@ -12,6 +12,8 @@ import 'features/bookings/bloc/my_bookings_bloc.dart';
 import 'features/bookings/data/bookings_repository.dart';
 import 'features/driver/bloc/my_rides_cubit.dart';
 import 'features/driver/bloc/post_ride_cubit.dart';
+import 'features/earnings/bloc/earnings_cubit.dart';
+import 'features/earnings/data/earnings_repository.dart';
 import 'features/notifications/bloc/notifications_cubit.dart';
 import 'features/notifications/data/notifications_repository.dart';
 import 'features/places/bloc/places_cubit.dart';
@@ -46,6 +48,7 @@ void main() {
         RepositoryProvider(create: (_) => PlacesRepository(api)),
         RepositoryProvider(create: (_) => NotificationsRepository(api)),
         RepositoryProvider(create: (_) => SubscriptionsRepository(api)),
+        RepositoryProvider(create: (_) => EarningsRepository(api)),
         RepositoryProvider(create: (_) => BookingsRepository(api)),
         RepositoryProvider(create: (_) => VehiclesRepository(api)),
         RepositoryProvider(create: (_) => TrustRepository(api)),
@@ -67,6 +70,7 @@ void main() {
               create: (context) => NotificationsCubit(context.read<NotificationsRepository>())),
           BlocProvider(
               create: (context) => SubscriptionsCubit(context.read<SubscriptionsRepository>())),
+          BlocProvider(create: (context) => EarningsCubit(context.read<EarningsRepository>())),
           BlocProvider(create: (context) => MyBookingsBloc(context.read<BookingsRepository>())),
           BlocProvider(create: (context) => BookingActionCubit(context.read<BookingsRepository>())),
           BlocProvider(create: (context) => MyRidesCubit(context.read<RidesRepository>())),

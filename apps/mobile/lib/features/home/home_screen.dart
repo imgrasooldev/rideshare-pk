@@ -6,6 +6,7 @@ import '../bookings/bloc/my_bookings_bloc.dart';
 import '../bookings/presentation/my_bookings_screen.dart';
 import '../driver/bloc/my_rides_cubit.dart';
 import '../driver/presentation/drive_screen.dart';
+import '../earnings/bloc/earnings_cubit.dart';
 import '../places/bloc/places_cubit.dart';
 import '../profile/presentation/profile_screen.dart';
 import '../rides/presentation/search_screen.dart';
@@ -86,7 +87,10 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIndex: _tab,
         onDestinationSelected: (i) {
           setState(() => _tab = i);
-          if (i == driveIndex) context.read<MyRidesCubit>().load();
+          if (i == driveIndex) {
+            context.read<MyRidesCubit>().load();
+            context.read<EarningsCubit>().load();
+          }
           if (i == bookingsIndex) {
             context.read<MyBookingsBloc>().add(const MyBookingsRequested());
           }
