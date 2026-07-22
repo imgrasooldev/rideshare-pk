@@ -12,7 +12,8 @@ import {
 } from "@nestjs/common";
 import { z } from "zod";
 import type { AuthedRequest } from "../auth/jwt-auth.guard.js";
-import { ADMIN_INSIGHTS } from "../shared/tokens.js";
+import type { AppConfig } from "../config/config.js";
+import { ADMIN_INSIGHTS, APP_CONFIG } from "../shared/tokens.js";
 import { parse } from "../shared/validation.js";
 import type { AdminInsightsRepository } from "./admin-insights.repo.js";
 import { AdminGuard } from "./admin.guard.js";
@@ -52,12 +53,24 @@ export class AdminInsightsController {
 @Controller("admin/verifications")
 @UseGuards(AdminGuard)
 export class AdminController {
-  constructor(private readonly trust: TrustService) {}
+  constructor(
+    private readonly trust: TrustService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig
+  ) {}
 
   @Get()
   queue(@Query("cursor") cursor?: string, @Query("limit") limit?: string) {
     const n = Math.min(Math.max(Number(limit) || 20, 1), 100);
     return this.trust.listPending(cursor ?? null, n);
+  }
+
+  /**
+   * Short-lived signed URL so a reviewer can open a private document.
+   * Minted per request and never stored — the bucket stays private.
+   */
+  @Get(":id/document")
+  document(@Param("id") id: string) {
+    return this.trust.documentUrl(id, this.config.DOC_VIEW_TTL);
   }
 
   @Post(":id")

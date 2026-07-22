@@ -14,6 +14,7 @@ import { PlacesModule } from "./places/places.module.js";
 import { RatingsModule } from "./ratings/ratings.module.js";
 import { SubscriptionsModule } from "./subscriptions/subscriptions.module.js";
 import { RidesModule } from "./rides/rides.module.js";
+import { StorageModule } from "./storage/storage.module.js";
 import { TrackingModule } from "./tracking/tracking.module.js";
 import { TrustModule } from "./trust/trust.module.js";
 import { UsersModule } from "./users/users.module.js";
@@ -33,7 +34,7 @@ const adminDist = process.env.ADMIN_STATIC_DIR ?? join(process.cwd(), "..", "adm
     InfraModule, HealthModule, AuthModule, UsersModule,
     VehiclesModule, TrustModule, RidesModule, BookingsModule,
     TrackingModule, RatingsModule, PlacesModule, NotificationsModule,
-    SubscriptionsModule, EarningsModule, CategoriesModule, MessagesModule
+    SubscriptionsModule, EarningsModule, CategoriesModule, MessagesModule, StorageModule
   ]
 })
 export class AppModule {}

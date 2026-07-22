@@ -7,12 +7,21 @@ export interface VerificationRecord {
   id: string;
   userId: string;
   type: VerificationType;
-  docUrl: string;
+  /** Legacy/external link. Null when the document was uploaded to storage. */
+  docUrl: string | null;
+  /** Private storage object key — resolved to a signed URL for reviewers only. */
+  docKey: string | null;
   vehicleId: string | null;
   status: VerificationStatus;
   reviewerId: string | null;
   notes: string | null;
   createdAt: string;
+}
+
+/** Exactly one of these is supplied when submitting. */
+export interface DocumentRef {
+  docUrl: string | null;
+  docKey: string | null;
 }
 
 export interface PendingPage {
@@ -22,7 +31,7 @@ export interface PendingPage {
 }
 
 export interface VerificationRepository {
-  create(userId: string, type: VerificationType, docUrl: string, vehicleId: string | null): Promise<VerificationRecord>;
+  create(userId: string, type: VerificationType, doc: DocumentRef, vehicleId: string | null): Promise<VerificationRecord>;
   findById(id: string): Promise<VerificationRecord | null>;
   /** A user's own submissions, newest first (bounded — no pagination needed). */
   listByUser(userId: string, limit: number): Promise<VerificationRecord[]>;
@@ -31,8 +40,9 @@ export interface VerificationRepository {
   review(id: string, status: Exclude<VerificationStatus, "pending">, reviewerId: string, notes: string | null): Promise<VerificationRecord | null>;
 }
 
-const COLS = `id, user_id AS "userId", type, doc_url AS "docUrl", vehicle_id AS "vehicleId",
-  status, reviewer_id AS "reviewerId", notes, created_at AS "createdAt"`;
+const COLS = `id, user_id AS "userId", type, doc_url AS "docUrl", doc_key AS "docKey",
+  vehicle_id AS "vehicleId", status, reviewer_id AS "reviewerId", notes,
+  created_at AS "createdAt"`;
 
 function encodeCursor(item: VerificationRecord): string {
   return Buffer.from(`${new Date(item.createdAt).toISOString()}|${item.id}`).toString("base64url");
@@ -51,11 +61,11 @@ function decodeCursor(cursor: string): { createdAt: string; id: string } | null 
 export class PgVerificationRepository implements VerificationRepository {
   constructor(private readonly pool: Pool) {}
 
-  async create(userId: string, type: VerificationType, docUrl: string, vehicleId: string | null): Promise<VerificationRecord> {
+  async create(userId: string, type: VerificationType, doc: DocumentRef, vehicleId: string | null): Promise<VerificationRecord> {
     const { rows } = await this.pool.query(
-      `INSERT INTO verifications (user_id, type, doc_url, vehicle_id)
-       VALUES ($1, $2, $3, $4) RETURNING ${COLS}`,
-      [userId, type, docUrl, vehicleId]
+      `INSERT INTO verifications (user_id, type, doc_url, doc_key, vehicle_id)
+       VALUES ($1, $2, $3, $4, $5) RETURNING ${COLS}`,
+      [userId, type, doc.docUrl, doc.docKey, vehicleId]
     );
     return rows[0];
   }
@@ -104,12 +114,13 @@ export class InMemoryVerificationRepository implements VerificationRepository {
   private readonly items = new Map<string, VerificationRecord>();
   private seq = 0;
 
-  async create(userId: string, type: VerificationType, docUrl: string, vehicleId: string | null): Promise<VerificationRecord> {
+  async create(userId: string, type: VerificationType, doc: DocumentRef, vehicleId: string | null): Promise<VerificationRecord> {
     const rec: VerificationRecord = {
       id: `ver-${String(++this.seq).padStart(4, "0")}`,
       userId,
       type,
-      docUrl,
+      docUrl: doc.docUrl,
+      docKey: doc.docKey,
       vehicleId,
       status: "pending",
       reviewerId: null,

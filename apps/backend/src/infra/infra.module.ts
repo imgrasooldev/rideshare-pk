@@ -12,9 +12,11 @@ import { InMemoryBookingRepository, PgBookingRepository } from "../bookings/book
 import { InMemoryRatingRepository, PgRatingRepository } from "../ratings/ratings.repo.js";
 import { InMemoryRideRepository, PgRideRepository } from "../rides/rides.repo.js";
 import { InMemoryBus, RedisBus } from "../shared/bus.js";
+import { createDocumentStorage } from "../storage/storage.provider.js";
 import {
   ADMIN_INSIGHTS,
   APP_CONFIG,
+  DOCUMENT_STORAGE,
   BOOKING_REPOSITORY,
   BUS,
   IDENTITY_REPOSITORY,
@@ -152,6 +154,11 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
         pool ? new PgAdminInsightsRepository(pool) : new StubAdminInsightsRepository()
     },
     {
+      provide: DOCUMENT_STORAGE,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => createDocumentStorage(config)
+    },
+    {
       provide: BUS,
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) => {
@@ -165,7 +172,7 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
     APP_CONFIG, KV_STORE, PG_POOL, BUS, IDENTITY_REPOSITORY, ADMIN_INSIGHTS,
     USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY,
     BOOKING_REPOSITORY, TRIP_REPOSITORY, RATING_REPOSITORY, SAFETY_REPOSITORY,
-    NOTIFICATION_REPOSITORY, SUBSCRIPTION_REPOSITORY, MESSAGE_REPOSITORY
+    NOTIFICATION_REPOSITORY, SUBSCRIPTION_REPOSITORY, MESSAGE_REPOSITORY, DOCUMENT_STORAGE
   ]
 })
 export class InfraModule {}

@@ -46,6 +46,14 @@ const envSchema = z.object({
   TWILIO_FROM: z.string().default(""),
   TWILIO_CHANNEL: z.enum(["sms", "whatsapp"]).default("sms"),
 
+  // Verification document storage. "none" = uploads disabled (503).
+  // The bucket MUST be private — these are CNIC/licence photos.
+  STORAGE_PROVIDER: z.enum(["none", "supabase"]).default("none"),
+  SUPABASE_URL: z.string().default(""), // https://<project-ref>.supabase.co
+  SUPABASE_SERVICE_KEY: z.string().default(""), // service_role key, server-side only
+  STORAGE_BUCKET: z.string().default("verification-docs"),
+  DOC_VIEW_TTL: z.coerce.number().int().positive().default(300),
+
   MAPS_PROVIDER: z.enum(["osm", "google"]).default("osm"),
   CITY_DEFAULT: z.string().default("lahore"),
 
