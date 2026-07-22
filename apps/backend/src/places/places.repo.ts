@@ -23,6 +23,12 @@ export interface PlaceHit {
   lng: number;
 }
 
+export interface RouteInfo {
+  distanceKm: number;
+  durationMin: number;
+  points: Array<[number, number]>; // [lat, lng] polyline
+}
+
 // Zero-infra dev fallback so the endpoints still return something without a DB.
 const FALLBACK_CITIES: City[] = [
   { slug: "karachi", name: "Karachi", centerLat: 24.8607, centerLng: 67.0011 },
@@ -97,6 +103,68 @@ export class PlacesRepository {
       return [];
     }
   }
+
+  /**
+   * Driving route between two points via the public OSRM server (no key).
+   * Best-effort — returns null on failure so the app hides the estimate.
+   */
+  async route(
+    fromLat: number,
+    fromLng: number,
+    toLat: number,
+    toLng: number
+  ): Promise<RouteInfo> {
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/` +
+      `${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "RidesharePK/1.0 (support@rideshare.pk)" },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          routes?: Array<{
+            distance: number;
+            duration: number;
+            geometry: { coordinates: Array<[number, number]> };
+          }>;
+        };
+        const r = data.routes?.[0];
+        if (r) {
+          return {
+            distanceKm: Math.round((r.distance / 1000) * 10) / 10,
+            durationMin: Math.round(r.duration / 60),
+            // OSRM geojson is [lng, lat]; flip to [lat, lng] for the map.
+            points: r.geometry.coordinates.map(([lng, lat]) => [lat, lng] as [number, number])
+          };
+        }
+      }
+    } catch {
+      /* fall through to the straight-line estimate */
+    }
+    // Fallback: haversine distance + a ~25 km/h city-speed ETA, straight line.
+    const km = haversineKm(fromLat, fromLng, toLat, toLng);
+    return {
+      distanceKm: Math.round(km * 10) / 10,
+      durationMin: Math.max(1, Math.round((km / 25) * 60)),
+      points: [
+        [fromLat, fromLng],
+        [toLat, toLng]
+      ]
+    };
+  }
+}
+
+/** Straight-line distance in km — used when OSRM is unreachable. */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 /** Nominatim display names are long; keep the first few meaningful parts. */

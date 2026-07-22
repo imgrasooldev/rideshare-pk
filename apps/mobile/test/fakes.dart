@@ -434,6 +434,10 @@ class FakePlacesRepository implements PlacesRepository {
   @override
   Future<List<Hub>> search(String query, {String? city}) async =>
       const [Hub('Packages Mall, Lahore', 31.4712, 74.3560)];
+
+  @override
+  Future<RouteInfo> route(Hub from, Hub to) async =>
+      const RouteInfo(distanceKm: 8.4, durationMin: 22);
 }
 
 class FakeNotificationsRepository implements NotificationsRepository {

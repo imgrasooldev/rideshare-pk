@@ -22,4 +22,15 @@ export class PlacesController {
   search(@Query("q") q?: string, @Query("city") city?: string) {
     return this.places.search((q ?? "").trim(), city?.trim());
   }
+
+  // Driving distance/ETA + polyline between two points.
+  @Get("places/route")
+  route(
+    @Query("fromLat") fromLat: string,
+    @Query("fromLng") fromLng: string,
+    @Query("toLat") toLat: string,
+    @Query("toLng") toLng: string
+  ) {
+    return this.places.route(Number(fromLat), Number(fromLng), Number(toLat), Number(toLng));
+  }
 }

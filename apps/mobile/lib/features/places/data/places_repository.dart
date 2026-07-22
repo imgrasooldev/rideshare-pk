@@ -9,6 +9,21 @@ class City {
   final double centerLng;
 }
 
+/// Driving distance/ETA between two points (with a polyline).
+class RouteInfo {
+  const RouteInfo({required this.distanceKm, required this.durationMin, this.points = const []});
+  factory RouteInfo.fromJson(Map<String, dynamic> j) => RouteInfo(
+        distanceKm: (j['distanceKm'] as num?)?.toDouble() ?? 0,
+        durationMin: (j['durationMin'] as num?)?.toInt() ?? 0,
+        points: ((j['points'] as List<dynamic>?) ?? [])
+            .map((p) => ((p as List).map((n) => (n as num).toDouble()).toList()))
+            .toList(),
+      );
+  final double distanceKm;
+  final int durationMin;
+  final List<List<double>> points; // [[lat, lng], ...]
+}
+
 /// Loads dynamic locations from the backend (Postgres): cities and their curated
 /// pickup/drop hubs. Replaces the old hardcoded Lahore-only list.
 class PlacesRepository {
@@ -41,6 +56,15 @@ class PlacesRepository {
             ))
         .toList();
   }
+
+  Future<RouteInfo> route(Hub from, Hub to) async => RouteInfo.fromJson(
+        await _api.get('/places/route', query: {
+          'fromLat': from.lat,
+          'fromLng': from.lng,
+          'toLat': to.lat,
+          'toLng': to.lng,
+        }),
+      );
 
   Future<List<City>> cities() async {
     final res = await _api.getList('/cities');

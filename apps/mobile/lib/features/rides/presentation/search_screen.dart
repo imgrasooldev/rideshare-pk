@@ -11,6 +11,7 @@ import '../../bookings/bloc/booking_action_cubit.dart';
 import '../../categories/bloc/categories_cubit.dart';
 import '../../messages/presentation/chat_screen.dart';
 import '../../places/bloc/places_cubit.dart';
+import '../../places/data/places_repository.dart';
 import '../../places/presentation/place_picker.dart';
 import '../../subscriptions/data/subscriptions_repository.dart';
 import '../bloc/ride_search_bloc.dart';
@@ -298,6 +299,7 @@ class _SearchForm extends StatelessWidget {
                 ),
               ],
             ),
+            _EtaEstimate(pickup: pickup, drop: drop),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -326,6 +328,41 @@ class _SearchForm extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Shows the driving distance + ETA for the chosen pickup/drop (via OSRM,
+/// with a straight-line fallback). Re-fetches when either point changes.
+class _EtaEstimate extends StatelessWidget {
+  const _EtaEstimate({required this.pickup, required this.drop});
+  final Hub pickup;
+  final Hub drop;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final key = '${pickup.lat},${pickup.lng}-${drop.lat},${drop.lng}';
+    return FutureBuilder(
+      key: ValueKey(key),
+      future: context.read<PlacesRepository>().route(pickup, drop),
+      builder: (context, snap) {
+        if (!snap.hasData) return const SizedBox(height: 8);
+        final r = snap.data!;
+        if (r.distanceKm <= 0) return const SizedBox(height: 8);
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Icon(Icons.route_rounded, size: 16, color: theme.colorScheme.primary),
+              const SizedBox(width: 6),
+              Text('${r.distanceKm} km  ·  ~${r.durationMin} min drive',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        );
+      },
     );
   }
 }
