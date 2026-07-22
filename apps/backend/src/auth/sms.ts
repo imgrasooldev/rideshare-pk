@@ -7,6 +7,9 @@ import type { AppConfig } from "../config/config.js";
 
 export interface SmsSender {
   sendOtp(phone: string, code: string): Promise<void>;
+  /** Generic transactional SMS (e.g. an SOS alert). Optional so lightweight
+   *  test doubles need only implement sendOtp. */
+  send?(phone: string, message: string): Promise<void>;
 }
 
 /** The text a user actually receives. Kept short — PK gateways bill per 160 chars. */
@@ -18,6 +21,10 @@ export function otpMessage(code: string, minutes: number): string {
 export class DevLogSmsSender implements SmsSender {
   async sendOtp(phone: string, code: string): Promise<void> {
     console.log(JSON.stringify({ level: "info", msg: "dev OTP (not sent)", phone, code }));
+  }
+
+  async send(phone: string, message: string): Promise<void> {
+    console.log(JSON.stringify({ level: "info", msg: "dev SMS (not sent)", phone, message }));
   }
 }
 
@@ -45,13 +52,17 @@ export class VeevoTechSmsSender implements SmsSender {
   ) {}
 
   async sendOtp(phone: string, code: string): Promise<void> {
+    return this.send(phone, otpMessage(code, this.ttlMinutes));
+  }
+
+  async send(phone: string, message: string): Promise<void> {
     // VeevoTech expects a local-format number (03xxxxxxxxx), not E.164.
     const receiver = phone.replace(/^\+92/, "0");
     const params = new URLSearchParams({
       hash: this.apiKey,
       receivenum: receiver,
       sender_id: this.senderId,
-      textmessage: otpMessage(code, this.ttlMinutes)
+      textmessage: message
     });
 
     try {
@@ -90,11 +101,15 @@ export class TwilioSmsSender implements SmsSender {
   ) {}
 
   async sendOtp(phone: string, code: string): Promise<void> {
+    return this.send(phone, otpMessage(code, this.ttlMinutes));
+  }
+
+  async send(phone: string, message: string): Promise<void> {
     const prefix = this.channel === "whatsapp" ? "whatsapp:" : "";
     const body = new URLSearchParams({
       To: `${prefix}${phone}`,
       From: `${prefix}${this.from}`,
-      Body: otpMessage(code, this.ttlMinutes)
+      Body: message
     });
 
     try {

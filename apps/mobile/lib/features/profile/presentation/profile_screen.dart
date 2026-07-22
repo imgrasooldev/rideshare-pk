@@ -138,6 +138,10 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Card(
+            child: _EmergencyContactTile(user: user),
+          ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
             onPressed: () => context.read<AuthBloc>().add(const AuthLogoutRequested()),
@@ -146,6 +150,71 @@ class ProfileScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Safety: the trusted contact alerted (by SMS with live location) on an SOS.
+class _EmergencyContactTile extends StatelessWidget {
+  const _EmergencyContactTile({required this.user});
+  final User user;
+
+  Future<void> _edit(BuildContext context) async {
+    final controller = TextEditingController(text: user.emergencyPhone ?? '');
+    final cubit = context.read<ProfileCubit>();
+    final phone = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Emergency contact'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('We SMS this number your live location if you trigger SOS.',
+                style: Theme.of(ctx).textTheme.bodySmall),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                prefixText: '+92 ',
+                labelText: 'Mobile number',
+                hintText: '3XX XXXXXXX',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (phone == null || phone.isEmpty) return;
+    // Normalise a local 03xx / 3xx number to E.164 for the backend.
+    var e164 = phone.replaceAll(RegExp(r'[\s-]'), '');
+    if (e164.startsWith('0')) e164 = e164.substring(1);
+    if (!e164.startsWith('+')) e164 = '+92$e164';
+    cubit.save(emergencyPhone: e164);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final set = (user.emergencyPhone?.trim().isNotEmpty ?? false);
+    return ListTile(
+      leading: Icon(Icons.health_and_safety_outlined, color: theme.colorScheme.primary),
+      title: const Text('Emergency contact'),
+      subtitle: Text(set
+          ? user.emergencyPhone!
+          : 'Add a trusted contact for SOS alerts'),
+      trailing: Text(set ? 'Edit' : 'Add',
+          style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w700)),
+      onTap: () => _edit(context),
     );
   }
 }

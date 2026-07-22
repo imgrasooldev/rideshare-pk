@@ -28,6 +28,6 @@ import { TokenService } from "./token.service.js";
       useFactory: (config: AppConfig) => new RealOAuthVerifier(config)
     }
   ],
-  exports: [TokenService, JwtAuthGuard]
+  exports: [TokenService, JwtAuthGuard, SMS_SENDER]
 })
 export class AuthModule {}

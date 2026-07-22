@@ -38,10 +38,12 @@ class ProfileCubit extends Cubit<ProfileState> {
 
   final AuthRepository _auth;
 
-  Future<void> save({String? name, String? role, String? gender, String? cnic}) async {
+  Future<void> save(
+      {String? name, String? role, String? gender, String? cnic, String? emergencyPhone}) async {
     emit(const ProfileSaving());
     try {
-      final user = await _auth.updateProfile(name: name, role: role, gender: gender, cnic: cnic);
+      final user = await _auth.updateProfile(
+          name: name, role: role, gender: gender, cnic: cnic, emergencyPhone: emergencyPhone);
       emit(ProfileSaved(user));
     } on ApiException catch (e) {
       emit(ProfileError(e.message));
