@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
+import '../../../core/widgets/seat_map.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../../core/network/api_exception.dart';
 import '../../bookings/bloc/booking_action_cubit.dart';
@@ -460,6 +461,15 @@ class _RideCard extends StatelessWidget {
                 const StatusPill('Cash', color: Color(0xFF00695C)),
               ],
             ),
+            // Van/Hiace: show the seat chart so riders see what's already booked.
+            if (ride.vehicleType == 'minivan' || ride.vehicleType == 'hiace') ...[
+              const SizedBox(height: 14),
+              SeatMap(
+                seatsTotal: ride.seatsTotal,
+                seatsAvailable: ride.seatsAvailable,
+                perRow: ride.vehicleType == 'hiace' ? 4 : 3,
+              ),
+            ],
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,

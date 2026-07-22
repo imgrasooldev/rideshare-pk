@@ -70,4 +70,30 @@ export class RidesService {
   myRides(driverId: string, cursor: string | null, limit: number): Promise<RidePage> {
     return this.rides.listByDriver(driverId, cursor, limit);
   }
+
+  /** Driver self-manages seat count on a posted ride (e.g. a minivan filling up). */
+  async updateSeats(driverId: string, rideId: string, seatsTotal: number): Promise<RideRecord> {
+    const ride = await this.rides.findById(rideId);
+    if (!ride) throw new NotFoundException("Ride not found");
+    if (ride.driverId !== driverId) throw new ForbiddenException("Not your ride");
+    if (ride.status !== "open" && ride.status !== "full") {
+      throw new BadRequestException("This ride can no longer be edited");
+    }
+    if (ride.vehicleType === "bike" && seatsTotal > 1) {
+      throw new BadRequestException("A bike ride can offer only 1 passenger seat");
+    }
+    const reserved = ride.seatsTotal - ride.seatsAvailable;
+    if (seatsTotal < reserved) {
+      throw new BadRequestException(`${reserved} seat(s) already booked — can't go below that`);
+    }
+    if (ride.vehicleId) {
+      const vehicle = await this.vehicles.findById(ride.vehicleId);
+      if (vehicle && seatsTotal > vehicle.seats) {
+        throw new BadRequestException(`Vehicle has only ${vehicle.seats} seats`);
+      }
+    }
+    const updated = await this.rides.updateSeats(rideId, driverId, seatsTotal);
+    if (!updated) throw new BadRequestException("Could not update seats");
+    return updated;
+  }
 }

@@ -4,7 +4,9 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
+import '../../../core/widgets/seat_map.dart';
 import '../../../core/widgets/status_pill.dart';
+import '../../rides/data/rides_repository.dart';
 import '../../earnings/bloc/earnings_cubit.dart';
 import '../../earnings/data/earnings_repository.dart';
 import '../../tracking/presentation/live_trip_screen.dart';
@@ -242,6 +244,84 @@ class _RideCard extends StatelessWidget {
   const _RideCard({required this.ride});
   final dynamic ride;
 
+  Future<void> _manageSeats(BuildContext context) async {
+    final reserved = (ride.seatsTotal - ride.seatsAvailable) as int;
+    final cap = ride.vehicleType == 'bike'
+        ? 1
+        : ride.vehicleType == 'hiace'
+            ? 14
+            : ride.vehicleType == 'minivan'
+                ? 8
+                : 6;
+    final repo = context.read<RidesRepository>();
+    final rides = context.read<MyRidesCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    final total = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        int value = ride.seatsTotal as int;
+        return StatefulBuilder(
+          builder: (ctx, setState) => Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Total seats',
+                    style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('$reserved already booked — you can\'t go below that.',
+                    style: Theme.of(ctx).textTheme.bodySmall),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton.outlined(
+                      onPressed: value > (reserved < 1 ? 1 : reserved)
+                          ? () => setState(() => value--)
+                          : null,
+                      icon: const Icon(Icons.remove),
+                    ),
+                    SizedBox(
+                      width: 64,
+                      child: Text('$value',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(ctx)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800)),
+                    ),
+                    IconButton.outlined(
+                      onPressed: value < cap ? () => setState(() => value++) : null,
+                      icon: const Icon(Icons.add),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.pop(ctx, value),
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (total == null || total == ride.seatsTotal) return;
+    try {
+      await repo.updateSeats(ride.id as String, total);
+      await rides.load();
+      messenger.showSnackBar(SnackBar(content: Text('Seats updated to $total')));
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Could not update seats')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -272,19 +352,38 @@ class _RideCard extends StatelessWidget {
               '  ·  Rs ${ride.pricePerSeat}/seat',
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
             ),
+            if (ride.vehicleType == 'minivan' || ride.vehicleType == 'hiace') ...[
+              const SizedBox(height: 14),
+              SeatMap(
+                seatsTotal: ride.seatsTotal,
+                seatsAvailable: ride.seatsAvailable,
+                perRow: ride.vehicleType == 'hiace' ? 4 : 3,
+              ),
+            ],
             if (ride.status == 'open' || ride.status == 'full') ...[
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonalIcon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => LiveTripPage(mode: LiveTripMode.driver, ride: ride),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _manageSeats(context),
+                      icon: const Icon(Icons.event_seat_rounded, size: 18),
+                      label: const Text('Manage seats'),
                     ),
                   ),
-                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                  label: const Text('Start trip'),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => LiveTripPage(mode: LiveTripMode.driver, ride: ride),
+                        ),
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                      label: const Text('Start'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ],

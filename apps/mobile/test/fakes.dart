@@ -206,6 +206,30 @@ class FakeRidesRepository implements RidesRepository {
 
   @override
   Future<RidePage> myRides({String? cursor}) async => RidePage(items: posted.reversed.toList());
+
+  @override
+  Future<Ride> updateSeats(String rideId, int seatsTotal) async {
+    final i = rides.indexWhere((r) => r.id == rideId);
+    if (i < 0) throw StateError('ride not found');
+    final r = rides[i];
+    final reserved = r.seatsTotal - r.seatsAvailable;
+    final updated = Ride(
+      id: r.id,
+      driverId: r.driverId,
+      originLabel: r.originLabel,
+      destLabel: r.destLabel,
+      departAt: r.departAt,
+      seatsTotal: seatsTotal,
+      seatsAvailable: (seatsTotal - reserved).clamp(0, seatsTotal),
+      pricePerSeat: r.pricePerSeat,
+      vehicleType: r.vehicleType,
+      ladiesOnly: r.ladiesOnly,
+      status: r.status,
+      city: r.city,
+    );
+    rides[i] = updated;
+    return updated;
+  }
 }
 
 class FakeVehiclesRepository implements VehiclesRepository {

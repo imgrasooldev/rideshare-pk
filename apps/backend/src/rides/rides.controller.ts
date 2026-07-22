@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import { JwtAuthGuard, type AuthedRequest } from "../auth/jwt-auth.guard.js";
 import { parse } from "../shared/validation.js";
@@ -90,5 +90,12 @@ export class RidesController {
   @UseGuards(JwtAuthGuard)
   get(@Param("id") id: string) {
     return this.rides.getById(id);
+  }
+
+  @Patch(":id/seats")
+  @UseGuards(JwtAuthGuard)
+  updateSeats(@Req() req: AuthedRequest, @Param("id") id: string, @Body() body: unknown) {
+    const dto = parse(z.object({ seatsTotal: z.number().int().min(1).max(20) }), body);
+    return this.rides.updateSeats(req.user.sub, id, dto.seatsTotal);
   }
 }

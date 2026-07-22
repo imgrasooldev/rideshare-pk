@@ -79,6 +79,8 @@ export interface RideRepository {
   search(params: RideSearch): Promise<RidePage>;
   /** Driver's own rides, newest departure first. */
   listByDriver(driverId: string, cursor: string | null, limit: number): Promise<RidePage>;
+  /** Driver adjusts total seats; available/status recomputed off reserved seats. */
+  updateSeats(rideId: string, driverId: string, seatsTotal: number): Promise<RideRecord | null>;
 }
 
 function encodeCursor(r: RideRecord): string {
@@ -210,6 +212,22 @@ export class PgRideRepository implements RideRepository {
     const nextCursor = rows.length > limit ? encodeCursor(items[items.length - 1]) : null;
     return { items, nextCursor };
   }
+
+  async updateSeats(rideId: string, driverId: string, seatsTotal: number): Promise<RideRecord | null> {
+    // reserved = old seats_total − old seats_available (RHS sees pre-update row).
+    const { rows } = await this.pool.query(
+      `UPDATE rides SET
+         seats_total = $3,
+         seats_available = GREATEST(0, $3 - (seats_total - seats_available)),
+         status = CASE WHEN GREATEST(0, $3 - (seats_total - seats_available)) = 0
+                       THEN 'full' ELSE 'open' END,
+         updated_at = now()
+       WHERE id = $1 AND driver_id = $2 AND status IN ('open', 'full')
+       RETURNING ${COLS}`,
+      [rideId, driverId, seatsTotal]
+    );
+    return rows[0] ?? null;
+  }
 }
 
 /** Haversine metres — mirrors ST_DWithin semantics closely enough for dev. */
@@ -283,5 +301,16 @@ export class InMemoryRideRepository implements RideRepository {
     const items = all.slice(0, limit);
     const nextCursor = all.length > limit ? encodeCursor(items[items.length - 1]!) : null;
     return { items, nextCursor };
+  }
+
+  async updateSeats(rideId: string, driverId: string, seatsTotal: number): Promise<RideRecord | null> {
+    const r = this.items.get(rideId);
+    if (!r || r.driverId !== driverId || (r.status !== "open" && r.status !== "full")) return null;
+    const reserved = r.seatsTotal - r.seatsAvailable;
+    const available = Math.max(0, seatsTotal - reserved);
+    r.seatsTotal = seatsTotal;
+    r.seatsAvailable = available;
+    r.status = available === 0 ? "full" : "open";
+    return r;
   }
 }

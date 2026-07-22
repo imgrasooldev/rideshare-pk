@@ -74,6 +74,10 @@ class RidesRepository {
 
   Future<Ride> getById(String id) async => Ride.fromJson(await _api.get('/rides/$id'));
 
+  /// Driver adjusts total seats on a posted ride.
+  Future<Ride> updateSeats(String rideId, int seatsTotal) async => Ride.fromJson(
+      await _api.patch('/rides/$rideId/seats', body: {'seatsTotal': seatsTotal}));
+
   Future<Ride> postRide({
     required Hub origin,
     required Hub dest,
