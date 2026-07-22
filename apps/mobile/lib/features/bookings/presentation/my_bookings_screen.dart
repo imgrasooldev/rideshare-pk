@@ -9,6 +9,7 @@ import '../../rides/data/rides_repository.dart';
 import '../../tracking/presentation/live_trip_screen.dart';
 import '../bloc/my_bookings_bloc.dart';
 import '../data/models/booking.dart';
+import 'receipt_screen.dart';
 
 class MyBookingsScreen extends StatelessWidget {
   const MyBookingsScreen({super.key});
@@ -183,12 +184,19 @@ class _BookingCard extends StatelessWidget {
                       label: const Text('Track ride'),
                     ),
                   ),
+                  IconButton(
+                    tooltip: 'Receipt',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => ReceiptScreen(booking: booking)),
+                    ),
+                    icon: const Icon(Icons.receipt_long_outlined),
+                  ),
                   TextButton(
                     style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
                     onPressed: cancelling
                         ? null
                         : () => _cancelWithReason(context, booking.id),
-                    child: Text(cancelling ? 'Cancelling…' : 'Cancel booking'),
+                    child: Text(cancelling ? 'Cancelling…' : 'Cancel'),
                   ),
                 ],
               ),
