@@ -6,6 +6,7 @@ import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/data/models/user.dart';
 import '../../rides/data/rides_repository.dart'
     show vehicleTypeIcon, vehicleTypeLabel, vehicleTypes;
+import '../../referrals/presentation/referral_screen.dart';
 import '../../trust/bloc/verifications_cubit.dart';
 import '../../vehicles/bloc/vehicles_cubit.dart';
 import '../../subscriptions/presentation/subscriptions_screen.dart';
@@ -141,6 +142,18 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Card(
             child: _EmergencyContactTile(user: user),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(Icons.card_giftcard_rounded, color: theme.colorScheme.primary),
+              title: const Text('Refer & earn'),
+              subtitle: const Text('Share your code with friends'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ReferralScreen()),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
