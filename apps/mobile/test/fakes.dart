@@ -236,11 +236,29 @@ class FakeVehiclesRepository implements VehiclesRepository {
 
 class FakeTrustRepository implements TrustRepository {
   final List<Verification> submissions = [];
+  final List<String> uploadedKeys = [];
+  /// Keys submitted alongside each verification, for assertions.
+  final List<String?> submittedDocKeys = [];
+
+  @override
+  Future<String> uploadDocument({
+    required String purpose,
+    required List<int> bytes,
+    required String contentType,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    onProgress?.call(bytes.length ~/ 2, bytes.length);
+    onProgress?.call(bytes.length, bytes.length);
+    final key = 'u1/$purpose-${uploadedKeys.length + 1}.jpg';
+    uploadedKeys.add(key);
+    return key;
+  }
 
   @override
   Future<Verification> submit({
     required String type,
-    required String docUrl,
+    String? docKey,
+    String? docUrl,
     String? vehicleId,
   }) async {
     final v = Verification(
@@ -250,6 +268,7 @@ class FakeTrustRepository implements TrustRepository {
       createdAt: DateTime.now(),
     );
     submissions.add(v);
+    submittedDocKeys.add(docKey);
     return v;
   }
 

@@ -47,6 +47,35 @@ class ApiClient {
   Future<Map<String, dynamic>> patch(String path, {Object? body}) =>
       _request(() => _dio.patch<Map<String, dynamic>>(path, data: body));
 
+  /// Uploads raw bytes to an absolute, pre-signed URL (e.g. Supabase Storage).
+  /// Deliberately unauthenticated: the URL carries its own short-lived token,
+  /// and our bearer token must never be sent to a third-party host.
+  Future<void> putSigned(
+    String absoluteUrl,
+    List<int> bytes,
+    String contentType, {
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    try {
+      await _dio.put<void>(
+        absoluteUrl,
+        data: Stream.fromIterable([bytes]),
+        onSendProgress: onProgress,
+        options: Options(
+          extra: {'noAuth': true},
+          headers: {
+            'content-type': contentType,
+            Headers.contentLengthHeader: bytes.length,
+          },
+          sendTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+    } on DioException catch (e) {
+      throw _toApiException(e);
+    }
+  }
+
   Future<Map<String, dynamic>> _request(
     Future<Response<Map<String, dynamic>>> Function() send,
   ) =>

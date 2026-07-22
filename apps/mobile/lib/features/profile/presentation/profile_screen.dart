@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/data/models/user.dart';
@@ -182,41 +183,64 @@ class _VerificationSection extends StatelessWidget {
   const _VerificationSection({required this.user});
   final User user;
 
+  /// Snap or pick the CNIC photo, then upload it straight to private storage.
   Future<void> _submitCnicDialog(BuildContext context) async {
-    final controller = TextEditingController();
     final cubit = context.read<VerificationsCubit>();
-    final submitted = await showDialog<bool>(
+    final messenger = ScaffoldMessenger.of(context);
+
+    final source = await showModalBottomSheet<ImageSource>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('CNIC verification'),
-        content: Column(
+      builder: (sheetContext) => SafeArea(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-                'Paste a link to a photo of your CNIC (front). In-app photo upload is coming soon.'),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Document URL',
-                hintText: 'https://…',
-                border: OutlineInputBorder(),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Text(
+                'Photograph the front of your CNIC. Make sure all four corners are '
+                'visible and the text is readable.',
+                textAlign: TextAlign.center,
               ),
             ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Submit')),
-        ],
       ),
     );
-    if (submitted == true && controller.text.trim().isNotEmpty) {
-      await cubit.submit(type: 'cnic', docUrl: controller.text.trim());
+    if (source == null) return;
+
+    // Downscale before upload: CNIC text stays legible well under 1600px,
+    // and riders on patchy mobile data should not push 8MP originals.
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    if (bytes.lengthInBytes > 8 * 1024 * 1024) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('That image is too large — please retake it.')),
+      );
+      return;
     }
-    controller.dispose();
+
+    await cubit.uploadAndSubmit(
+      type: 'cnic',
+      bytes: bytes,
+      contentType: picked.mimeType ?? 'image/jpeg',
+    );
   }
 
   @override
@@ -226,12 +250,23 @@ class _VerificationSection extends StatelessWidget {
       builder: (context, state) {
         final items = state is VerificationsLoaded ? state.items : null;
         final pending = state is VerificationsLoaded && state.hasPendingCnic;
+        final busy = state is VerificationsLoaded && state.submitting;
+        final progress = state is VerificationsLoaded ? state.uploadProgress : null;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Verification', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
-            if (user.verified)
+            if (busy)
+              ListTile(
+                leading: const Icon(Icons.cloud_upload_outlined),
+                title: Text(progress == null
+                    ? 'Submitting…'
+                    : 'Uploading document… ${(progress * 100).round()}%'),
+                subtitle: LinearProgressIndicator(value: progress),
+                contentPadding: EdgeInsets.zero,
+              )
+            else if (user.verified)
               const ListTile(
                 leading: Icon(Icons.verified, color: Colors.green),
                 title: Text('CNIC verified'),
