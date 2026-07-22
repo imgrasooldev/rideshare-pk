@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'app.dart';
 import 'core/network/api_client.dart';
+import 'features/app_mode/app_mode_cubit.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/data/auth_repository.dart';
@@ -71,6 +72,7 @@ void main() {
               return bloc;
             },
           ),
+          BlocProvider(create: (context) => AppModeCubit()),
           BlocProvider(create: (context) => RideSearchBloc(context.read<RidesRepository>())),
           BlocProvider(create: (context) => PlacesCubit(context.read<PlacesRepository>())),
           BlocProvider(

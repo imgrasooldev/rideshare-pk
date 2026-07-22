@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../app_mode/app_mode_cubit.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../rides/data/rides_repository.dart'
@@ -8,7 +9,6 @@ import '../../rides/data/rides_repository.dart'
 import '../../vehicles/bloc/vehicles_cubit.dart';
 import '../../vehicles/data/vehicles_repository.dart';
 import '../bloc/my_rides_cubit.dart';
-import 'post_ride_screen.dart';
 
 /// Turns a rider into a provider: add a vehicle, flip the account to a driver
 /// (role "both"), and hand off to posting the first ride.
@@ -58,6 +58,7 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
     final authBloc = context.read<AuthBloc>();
     final vehiclesCubit = context.read<VehiclesCubit>();
     final myRides = context.read<MyRidesCubit>();
+    final appMode = context.read<AppModeCubit>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
@@ -76,13 +77,12 @@ class _BecomeDriverScreenState extends State<BecomeDriverScreen> {
       authBloc.add(AuthProfileRefreshed(user));
       vehiclesCubit.load();
       myRides.load();
+      // 4) Enter Driver Mode; popping returns to the (now) driver shell.
+      appMode.toDriver();
       messenger.showSnackBar(
-        const SnackBar(content: Text("You're a driver now — offer your first ride!")),
+        const SnackBar(content: Text("You're a driver now — welcome to Driver Mode!")),
       );
-      // 4) Straight into posting a ride.
-      navigator.pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const PostRideScreen()),
-      );
+      navigator.pop();
     } catch (_) {
       if (!mounted) return;
       setState(() {

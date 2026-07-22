@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../app_mode/app_mode_cubit.dart';
 import '../auth/data/models/user.dart';
 import '../bookings/bloc/my_bookings_bloc.dart';
 import '../bookings/presentation/my_bookings_screen.dart';
-import '../driver/bloc/my_rides_cubit.dart';
-import '../driver/presentation/drive_screen.dart';
-import '../earnings/bloc/earnings_cubit.dart';
+import '../driver/presentation/driver_shell.dart';
 import '../places/bloc/places_cubit.dart';
 import '../profile/presentation/profile_screen.dart';
 import '../rides/presentation/search_screen.dart';
@@ -14,23 +13,44 @@ import '../trust/bloc/verifications_cubit.dart';
 import '../vehicles/bloc/vehicles_cubit.dart';
 import 'dashboard_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+/// Top-level router: the whole shell changes with the app mode. Passenger mode
+/// is booking-focused; driver mode (only for driver-role users) is a separate,
+/// earning-focused product.
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key, required this.user});
 
   final User user;
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    return BlocBuilder<AppModeCubit, AppModeState>(
+      builder: (context, state) {
+        // Driver mode is only reachable by driver-role users.
+        if (state.mode == AppMode.driver && user.isDriver) {
+          return DriverShell(user: user);
+        }
+        return PassengerShell(user: user);
+      },
+    );
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+/// Booking-focused experience: services, search, bookings, profile.
+/// Never surfaces driver earnings or business tools.
+class PassengerShell extends StatefulWidget {
+  const PassengerShell({super.key, required this.user});
+  final User user;
+
+  @override
+  State<PassengerShell> createState() => _PassengerShellState();
+}
+
+class _PassengerShellState extends State<PassengerShell> {
   int _tab = 0;
 
   // Category filter carried from a dashboard tile into the Search tab.
   String? _searchVertical;
   bool _searchLadies = false;
-
-  bool get _isDriver => widget.user.isDriver;
 
   @override
   void initState() {
@@ -43,21 +63,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Tab layout: Home · Search · [Drive] · Bookings · Profile
+    // Tab layout: Home · Search · Bookings · Profile (no driver tools here).
     const homeIndex = 0;
     const searchIndex = 1;
-    final driveIndex = _isDriver ? 2 : -1;
-    final bookingsIndex = _isDriver ? 3 : 2;
-    final profileIndex = _isDriver ? 4 : 3;
-    if (_tab > profileIndex) _tab = 0;
+    const bookingsIndex = 2;
+    const profileIndex = 3;
 
     final title = _tab == searchIndex
         ? 'Find a ride'
-        : _tab == driveIndex
-            ? 'My rides'
-            : _tab == bookingsIndex
-                ? 'My bookings'
-                : 'Profile';
+        : _tab == bookingsIndex
+            ? 'My bookings'
+            : 'Profile';
 
     final body = _tab == homeIndex
         ? DashboardScreen(
@@ -81,16 +97,13 @@ class _HomeScreenState extends State<HomeScreen> {
         : _tab == searchIndex
             ? SearchScreen(
                 initialVertical: _searchVertical, initialLadiesOnly: _searchLadies)
-            : _tab == driveIndex
-                ? const DriveScreen()
-                : _tab == bookingsIndex
-                    ? const MyBookingsScreen()
-                    : ProfileScreen(user: widget.user);
+            : _tab == bookingsIndex
+                ? const MyBookingsScreen()
+                : ProfileScreen(user: widget.user);
 
     return Scaffold(
-      appBar: _tab == homeIndex
-          ? null
-          : AppBar(title: Text(title), centerTitle: false),
+      appBar:
+          _tab == homeIndex ? null : AppBar(title: Text(title), centerTitle: false),
       body: body,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
@@ -103,10 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
               _searchLadies = false;
             }
           });
-          if (i == driveIndex) {
-            context.read<MyRidesCubit>().load();
-            context.read<EarningsCubit>().load();
-          }
           if (i == bookingsIndex) {
             context.read<MyBookingsBloc>().add(const MyBookingsRequested());
           }
@@ -115,18 +124,15 @@ class _HomeScreenState extends State<HomeScreen> {
             context.read<VerificationsCubit>().load();
           }
         },
-        destinations: [
-          const NavigationDestination(
+        destinations: const [
+          NavigationDestination(
               icon: Icon(Icons.home_outlined),
               selectedIcon: Icon(Icons.home_rounded),
               label: 'Home'),
-          const NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
-          if (_isDriver)
-            const NavigationDestination(
-                icon: Icon(Icons.directions_car_outlined), label: 'Drive'),
-          const NavigationDestination(
+          NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
+          NavigationDestination(
               icon: Icon(Icons.confirmation_number_outlined), label: 'Bookings'),
-          const NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
     );

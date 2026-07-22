@@ -3,8 +3,14 @@ import 'package:rideshare_mobile/features/auth/data/auth_repository.dart';
 import 'package:rideshare_mobile/features/auth/data/models/user.dart';
 import 'package:rideshare_mobile/features/bookings/data/bookings_repository.dart';
 import 'package:rideshare_mobile/features/bookings/data/models/booking.dart';
+import 'package:rideshare_mobile/features/categories/data/categories_repository.dart';
+import 'package:rideshare_mobile/features/earnings/data/earnings_repository.dart';
+import 'package:rideshare_mobile/features/messages/data/messages_repository.dart';
+import 'package:rideshare_mobile/features/notifications/data/notifications_repository.dart';
+import 'package:rideshare_mobile/features/places/data/places_repository.dart';
 import 'package:rideshare_mobile/features/rides/data/models/ride.dart';
 import 'package:rideshare_mobile/features/rides/data/rides_repository.dart';
+import 'package:rideshare_mobile/features/subscriptions/data/subscriptions_repository.dart';
 import 'package:rideshare_mobile/features/trust/data/models/verification.dart';
 import 'package:rideshare_mobile/features/trust/data/trust_repository.dart';
 import 'package:rideshare_mobile/features/vehicles/data/models/vehicle.dart';
@@ -154,6 +160,7 @@ class FakeRidesRepository implements RidesRepository {
     double radiusKm = 3,
     bool? ladiesOnly,
     String? vehicleType,
+    String? vertical,
     String? cursor,
   }) async =>
       RidePage(
@@ -304,4 +311,103 @@ class FakeBookingsRepository implements BookingsRepository {
   @override
   Future<({List<Booking> items, String? nextCursor})> mine({String? cursor}) async =>
       (items: bookings.reversed.toList(), nextCursor: null);
+}
+
+// --- Marketplace repositories added across later slices ---
+
+class FakePlacesRepository implements PlacesRepository {
+  @override
+  Future<List<Hub>> hubs(String city) async => const [
+        Hub('Gulberg (Liberty Market)', 31.5102, 74.3441),
+        Hub('DHA Phase 5', 31.4622, 74.4082),
+        Hub('Johar Town (Emporium)', 31.4676, 74.2664),
+      ];
+
+  @override
+  Future<List<City>> cities() async => const [
+        City('lahore', 'Lahore', 31.5204, 74.3587),
+        City('karachi', 'Karachi', 24.8607, 67.0011),
+      ];
+}
+
+class FakeNotificationsRepository implements NotificationsRepository {
+  @override
+  Future<NotificationsPage> fetch() async =>
+      const NotificationsPage(items: [], unread: 0);
+
+  @override
+  Future<void> markAllRead() async {}
+
+  @override
+  Future<void> markRead(String id) async {}
+}
+
+class FakeCategoriesRepository implements CategoriesRepository {
+  @override
+  Future<List<Category>> list() async => const [];
+}
+
+class FakeSubscriptionsRepository implements SubscriptionsRepository {
+  Subscription _stub(String rideId) => Subscription(
+        id: 'sub-1',
+        rideId: rideId,
+        seats: 1,
+        pricePerMonth: 8800,
+        status: 'active',
+        renewsOn: DateTime(2026, 8, 1),
+      );
+
+  @override
+  Future<Subscription> subscribe(String rideId, {int seats = 1}) async => _stub(rideId);
+
+  @override
+  Future<List<Subscription>> mine() async => const [];
+
+  @override
+  Future<Subscription> cancel(String id) async => _stub('ride-1');
+}
+
+class FakeMessagesRepository implements MessagesRepository {
+  @override
+  Future<List<ChatThread>> threads() async => const [];
+
+  @override
+  Future<List<Message>> thread(String rideId, String otherId, {int limit = 100}) async =>
+      const [];
+
+  @override
+  Future<Message> send({
+    required String rideId,
+    required String recipientId,
+    required String body,
+  }) async =>
+      Message(
+        id: 'msg-1',
+        rideId: rideId,
+        senderId: 'me',
+        recipientId: recipientId,
+        body: body,
+        createdAt: DateTime(2026, 7, 22),
+      );
+
+  @override
+  Future<int> unreadCount() async => 0;
+}
+
+class FakeEarningsRepository implements EarningsRepository {
+  @override
+  Future<Earnings> fetch() async => const Earnings(
+        today: 0,
+        thisMonth: 0,
+        allTime: 0,
+        tripsThisMonth: 0,
+        activeSubscribers: 0,
+        monthlyRecurring: 0,
+        openRides: 0,
+        commissionRate: 0.12,
+        commissionThisMonth: 0,
+        netThisMonth: 0,
+        ratingAvg: 0,
+        ratingCount: 0,
+      );
 }

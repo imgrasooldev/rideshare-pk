@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/theme/app_theme.dart';
+import 'features/app_mode/app_mode_cubit.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/home/home_screen.dart';
@@ -91,7 +92,11 @@ class _AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocConsumer<AuthBloc, AuthState>(
+      // Losing the session drops the app back to passenger mode so the next
+      // login never starts inside a previous user's Driver Mode.
+      listenWhen: (prev, curr) => curr is AuthUnauthenticated,
+      listener: (context, _) => context.read<AppModeCubit>().reset(),
       builder: (context, state) => switch (state) {
         AuthAuthenticated(:final user) => HomeScreen(user: user),
         AuthRestoring() =>

@@ -1,17 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rideshare_mobile/app.dart';
+import 'package:rideshare_mobile/features/app_mode/app_mode_cubit.dart';
 import 'package:rideshare_mobile/features/auth/bloc/auth_bloc.dart';
 import 'package:rideshare_mobile/features/auth/data/auth_repository.dart';
 import 'package:rideshare_mobile/features/bookings/bloc/booking_action_cubit.dart';
 import 'package:rideshare_mobile/features/bookings/bloc/my_bookings_bloc.dart';
 import 'package:rideshare_mobile/features/bookings/data/bookings_repository.dart';
+import 'package:rideshare_mobile/features/categories/bloc/categories_cubit.dart';
+import 'package:rideshare_mobile/features/categories/data/categories_repository.dart';
 import 'package:rideshare_mobile/features/driver/bloc/my_rides_cubit.dart';
 import 'package:rideshare_mobile/features/driver/bloc/post_ride_cubit.dart';
+import 'package:rideshare_mobile/features/earnings/bloc/earnings_cubit.dart';
+import 'package:rideshare_mobile/features/earnings/data/earnings_repository.dart';
+import 'package:rideshare_mobile/features/messages/bloc/messages_unread_cubit.dart';
+import 'package:rideshare_mobile/features/messages/bloc/threads_cubit.dart';
+import 'package:rideshare_mobile/features/messages/data/messages_repository.dart';
+import 'package:rideshare_mobile/features/notifications/bloc/notifications_cubit.dart';
+import 'package:rideshare_mobile/features/notifications/data/notifications_repository.dart';
+import 'package:rideshare_mobile/features/places/bloc/places_cubit.dart';
+import 'package:rideshare_mobile/features/places/data/places_repository.dart';
 import 'package:rideshare_mobile/features/profile/bloc/profile_cubit.dart';
 import 'package:rideshare_mobile/features/rides/bloc/ride_search_bloc.dart';
 import 'package:rideshare_mobile/features/rides/data/rides_repository.dart';
+import 'package:rideshare_mobile/features/subscriptions/bloc/subscriptions_cubit.dart';
+import 'package:rideshare_mobile/features/subscriptions/data/subscriptions_repository.dart';
 import 'package:rideshare_mobile/features/trust/bloc/verifications_cubit.dart';
 import 'package:rideshare_mobile/features/trust/data/trust_repository.dart';
 import 'package:rideshare_mobile/features/vehicles/bloc/vehicles_cubit.dart';
@@ -28,6 +43,12 @@ Widget buildApp({
 }) {
   final vehiclesRepo = vehicles ?? FakeVehiclesRepository();
   final trustRepo = trust ?? FakeTrustRepository();
+  final placesRepo = FakePlacesRepository();
+  final notificationsRepo = FakeNotificationsRepository();
+  final categoriesRepo = FakeCategoriesRepository();
+  final subscriptionsRepo = FakeSubscriptionsRepository();
+  final messagesRepo = FakeMessagesRepository();
+  final earningsRepo = FakeEarningsRepository();
   return MultiRepositoryProvider(
     providers: [
       RepositoryProvider<AuthRepository>.value(value: auth),
@@ -35,9 +56,16 @@ Widget buildApp({
       RepositoryProvider<BookingsRepository>.value(value: bookings),
       RepositoryProvider<VehiclesRepository>.value(value: vehiclesRepo),
       RepositoryProvider<TrustRepository>.value(value: trustRepo),
+      RepositoryProvider<PlacesRepository>.value(value: placesRepo),
+      RepositoryProvider<NotificationsRepository>.value(value: notificationsRepo),
+      RepositoryProvider<CategoriesRepository>.value(value: categoriesRepo),
+      RepositoryProvider<SubscriptionsRepository>.value(value: subscriptionsRepo),
+      RepositoryProvider<MessagesRepository>.value(value: messagesRepo),
+      RepositoryProvider<EarningsRepository>.value(value: earningsRepo),
     ],
     child: MultiBlocProvider(
       providers: [
+        BlocProvider(create: (_) => AppModeCubit()),
         BlocProvider(create: (_) => AuthBloc(auth)..add(const AuthStarted())),
         BlocProvider(create: (_) => RideSearchBloc(rides)),
         BlocProvider(create: (_) => MyBookingsBloc(bookings)),
@@ -47,6 +75,13 @@ Widget buildApp({
         BlocProvider(create: (_) => ProfileCubit(auth)),
         BlocProvider(create: (_) => VehiclesCubit(vehiclesRepo)),
         BlocProvider(create: (_) => VerificationsCubit(trustRepo)),
+        BlocProvider(create: (_) => PlacesCubit(placesRepo)),
+        BlocProvider(create: (_) => NotificationsCubit(notificationsRepo)),
+        BlocProvider(create: (_) => CategoriesCubit(categoriesRepo)..load()),
+        BlocProvider(create: (_) => SubscriptionsCubit(subscriptionsRepo)),
+        BlocProvider(create: (_) => ThreadsCubit(messagesRepo)),
+        BlocProvider(create: (_) => MessagesUnreadCubit(messagesRepo)),
+        BlocProvider(create: (_) => EarningsCubit(earningsRepo)),
       ],
       child: const RideshareApp(),
     ),
@@ -59,6 +94,9 @@ void main() {
   late FakeBookingsRepository bookings;
 
   setUp(() {
+    // The splash reads SharedPreferences; mock it (onboarding already seen) so
+    // the app boots straight to the auth gate in tests.
+    SharedPreferences.setMockInitialValues({'onboarding_completed': true});
     auth = FakeAuthRepository();
     rides = FakeRidesRepository();
     bookings = FakeBookingsRepository();
@@ -71,8 +109,8 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField), '03001234567');
-    await tester.tap(find.text('Send code'));
+    await tester.enterText(find.byType(TextField).first, '03001234567');
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, '123456');
     await tester.pumpAndSettle();
@@ -85,24 +123,24 @@ void main() {
     expect(find.text('Rideshare PK'), findsOneWidget);
 
     // Invalid phone is rejected client-side.
-    await tester.enterText(find.byType(TextFormField), '12345');
-    await tester.tap(find.text('Send code'));
+    await tester.enterText(find.byType(TextField).first, '12345');
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('valid Pakistani mobile'), findsOneWidget);
+    expect(find.textContaining('valid mobile number'), findsOneWidget);
     expect(auth.lastOtpPhone, isNull);
 
     // Valid phone moves to the OTP step and surfaces the dev code.
-    await tester.enterText(find.byType(TextFormField), '03001234567');
-    await tester.tap(find.text('Send code'));
+    await tester.enterText(find.byType(TextField).first, '03001234567');
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(auth.lastOtpPhone, '03001234567');
-    expect(find.text('Enter the 6-digit code'), findsOneWidget);
+    expect(auth.lastOtpPhone, '+923001234567');
+    expect(find.textContaining('6-digit code'), findsWidgets);
     expect(find.text('Dev code: 123456'), findsOneWidget);
 
-    // 6 digits auto-submit → authenticated home with bottom tabs.
+    // 6 digits auto-submit → authenticated passenger home (dashboard).
     await tester.enterText(find.byType(TextField).last, '123456');
     await tester.pumpAndSettle();
-    expect(find.text('Find a ride'), findsOneWidget);
+    expect(find.text('Where to today?'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 
@@ -113,7 +151,7 @@ void main() {
     await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Email'));
+    await tester.tap(find.text('Sign in with email'));
     await tester.pumpAndSettle();
     expect(find.text('Log in'), findsOneWidget);
     expect(find.text('Forgot password?'), findsOneWidget);
@@ -127,7 +165,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(auth.registered['sara@example.com'], 'supersecret1');
-    expect(find.text('Find a ride'), findsOneWidget); // authenticated home
+    expect(find.byType(NavigationBar), findsOneWidget); // authenticated home
   });
 
   testWidgets('email login rejects a wrong password with the API error', (tester) async {
@@ -135,7 +173,7 @@ void main() {
     await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Email'));
+    await tester.tap(find.text('Sign in with email'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'sara@example.com');
     await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'wrongwrong1');
@@ -143,7 +181,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Incorrect email or password'), findsOneWidget);
-    expect(find.text('Find a ride'), findsNothing);
+    expect(find.byType(NavigationBar), findsNothing);
   });
 
   testWidgets('forgot password flow resets via the dev token', (tester) async {
@@ -151,7 +189,7 @@ void main() {
     await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Email'));
+    await tester.tap(find.text('Sign in with email'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forgot password?'));
     await tester.pumpAndSettle();
@@ -174,19 +212,21 @@ void main() {
   testWidgets('wrong OTP shows the API error and stays on the code step', (tester) async {
     await tester.pumpWidget(buildApp(auth: auth, rides: rides, bookings: bookings));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField), '03001234567');
-    await tester.tap(find.text('Send code'));
+    await tester.enterText(find.byType(TextField).first, '03001234567');
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).last, '999999');
     await tester.pumpAndSettle();
     expect(find.text('Invalid or expired code'), findsOneWidget);
-    expect(find.text('Enter the 6-digit code'), findsOneWidget);
+    expect(find.textContaining('6-digit code'), findsWidgets);
   });
 
   testWidgets('search shows ride cards and booking succeeds', (tester) async {
     await login(tester);
 
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Find rides'));
     await tester.pumpAndSettle();
 
@@ -207,6 +247,8 @@ void main() {
     rides.rides = [demoRide(seatsAvailable: 0)];
     await login(tester);
 
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Find rides'));
     await tester.pumpAndSettle();
 
@@ -214,16 +256,29 @@ void main() {
     expect(fullButton.onPressed, isNull);
   });
 
-  testWidgets('riders see no Drive tab; drivers do', (tester) async {
+  testWidgets('passenger mode never shows driver tools', (tester) async {
     await login(tester);
+    // No Drive tab and no Driver Mode dashboard in passenger mode.
     expect(find.text('Drive'), findsNothing);
+    expect(find.text('DRIVER MODE'), findsNothing);
   });
 
-  testWidgets('driver posts a ride from the Drive tab', (tester) async {
+  testWidgets('driver switches to Driver Mode and posts a ride', (tester) async {
     auth.loginAs = FakeAuthRepository.driverUser;
     await login(tester);
 
-    await tester.tap(find.text('Drive'));
+    // Enter the earning-focused Driver Mode from the passenger dashboard.
+    await tester.scrollUntilVisible(
+      find.text('Switch to Driver Mode'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Switch to Driver Mode'));
+    await tester.pumpAndSettle();
+    expect(find.text('DRIVER MODE'), findsOneWidget);
+
+    // The Rides tab holds the driver's posted rides + the post-ride action.
+    await tester.tap(find.text('Rides'));
     await tester.pumpAndSettle();
     expect(find.textContaining('No rides posted yet'), findsOneWidget);
 
@@ -238,7 +293,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Post ride'));
     await tester.pumpAndSettle();
 
-    // Back on the Drive tab with the new ride listed.
+    // Back on the Rides tab with the new ride listed.
     expect(rides.posted, hasLength(1));
     expect(rides.posted.single.seatsTotal, 3);
     expect(rides.posted.single.pricePerSeat, 250);
@@ -263,6 +318,8 @@ void main() {
 
   testWidgets('bookings tab lists my booking and cancel updates it', (tester) async {
     await login(tester);
+    await tester.tap(find.text('Search'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Find rides'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Book a seat'));

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../app_mode/app_mode_cubit.dart';
 import '../auth/data/models/user.dart';
 import '../bookings/bloc/my_bookings_bloc.dart';
 import '../categories/bloc/categories_cubit.dart';
@@ -149,14 +150,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (!widget.user.verified) _VerifyBanner(onTap: widget.onOpenProfile),
                 _NextRideCard(onTap: widget.onOpenBookings),
                 const _StatsStrip(),
-                if (!widget.user.isDriver) ...[
-                  const SizedBox(height: 12),
+                const SizedBox(height: 12),
+                if (widget.user.isDriver)
+                  _SwitchToDriverCard(
+                    onTap: () => context.read<AppModeCubit>().toDriver(),
+                  )
+                else
                   _OfferCarCard(
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(builder: (_) => const BecomeDriverScreen()),
                     ),
                   ),
-                ],
                 const SizedBox(height: 22),
                 Text('All services',
                     style: Theme.of(context)
@@ -561,6 +565,57 @@ class _StatsStrip extends StatelessWidget {
         const SizedBox(width: 8),
         const Expanded(child: _TrustCell(value: 'Cash', label: 'No wallet')),
       ],
+    );
+  }
+}
+
+/// For existing drivers: jump straight into the earning-focused Driver Mode.
+class _SwitchToDriverCard extends StatelessWidget {
+  const _SwitchToDriverCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF1B1B1F),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(18)),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                    color: const Color(0xFFE81E2D), borderRadius: BorderRadius.circular(13)),
+                child: const Icon(Icons.directions_car_filled_rounded,
+                    color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Switch to Driver Mode',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14)),
+                    SizedBox(height: 2),
+                    Text('Go online and start earning',
+                        style: TextStyle(color: Color(0xFFB9B9C2), fontSize: 12)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
