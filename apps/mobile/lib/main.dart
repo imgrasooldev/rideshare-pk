@@ -18,6 +18,7 @@ import 'features/bookings/bloc/requests_cubit.dart';
 import 'features/bookings/data/bookings_repository.dart';
 import 'features/categories/bloc/categories_cubit.dart';
 import 'features/categories/data/categories_repository.dart';
+import 'features/disputes/data/disputes_repository.dart';
 import 'features/driver/bloc/my_rides_cubit.dart';
 import 'features/driver/bloc/post_ride_cubit.dart';
 import 'features/earnings/bloc/earnings_cubit.dart';
@@ -87,6 +88,7 @@ Future<void> main() async {
         RepositoryProvider(create: (_) => TrustRepository(api)),
         RepositoryProvider(create: (_) => TrackingRepository(api, storage)),
         RepositoryProvider(create: (_) => ReferralsRepository(api)),
+        RepositoryProvider(create: (_) => DisputesRepository(api)),
       ],
       child: MultiBlocProvider(
         providers: [

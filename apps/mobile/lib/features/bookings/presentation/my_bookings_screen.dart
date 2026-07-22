@@ -7,6 +7,7 @@ import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../rides/data/rides_repository.dart';
 import '../../tracking/presentation/live_trip_screen.dart';
+import '../../disputes/presentation/report_sheet.dart';
 import '../bloc/my_bookings_bloc.dart';
 import '../data/models/booking.dart';
 import 'receipt_screen.dart';
@@ -201,6 +202,15 @@ class _BookingCard extends StatelessWidget {
                 ],
               ),
             ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => showReportSheet(context, bookingId: booking.id),
+                icon: Icon(Icons.flag_outlined, size: 16, color: theme.colorScheme.outline),
+                label: Text('Report a problem',
+                    style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.outline)),
+              ),
+            ),
           ],
         ),
       ),
