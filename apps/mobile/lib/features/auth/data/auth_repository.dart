@@ -100,5 +100,9 @@ class AuthRepository {
     return User.fromJson(res);
   }
 
+  /// Driver availability toggle — offline pauses their rides.
+  Future<User> setOnline(bool online) async =>
+      User.fromJson(await _api.patch('/me/online', body: {'online': online}));
+
   Future<void> logout() => _storage.clear();
 }

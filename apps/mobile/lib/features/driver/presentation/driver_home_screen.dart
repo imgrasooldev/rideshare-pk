@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../../app_mode/app_mode_cubit.dart';
+import '../../auth/bloc/auth_bloc.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../auth/data/models/user.dart';
 import '../../bookings/presentation/requests_screen.dart';
 import '../../earnings/bloc/earnings_cubit.dart';
@@ -142,6 +144,21 @@ class _DriverHeader extends StatelessWidget {
 class _OnlineToggle extends StatelessWidget {
   const _OnlineToggle();
 
+  Future<void> _toggleOnline(BuildContext context, bool value) async {
+    final appMode = context.read<AppModeCubit>();
+    final auth = context.read<AuthRepository>();
+    final authBloc = context.read<AuthBloc>();
+    final messenger = ScaffoldMessenger.of(context);
+    appMode.setOnline(value); // optimistic
+    try {
+      final user = await auth.setOnline(value);
+      authBloc.add(AuthProfileRefreshed(user));
+    } catch (_) {
+      appMode.setOnline(!value); // revert
+      messenger.showSnackBar(const SnackBar(content: Text('Could not update status')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AppModeCubit, AppModeState>(
@@ -180,7 +197,7 @@ class _OnlineToggle extends StatelessWidget {
               ),
               Switch(
                 value: online,
-                onChanged: (v) => context.read<AppModeCubit>().setOnline(v),
+                onChanged: (v) => _toggleOnline(context, v),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../app_mode/app_mode_cubit.dart';
 import '../../auth/data/models/user.dart';
 import '../../earnings/bloc/earnings_cubit.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -26,10 +27,12 @@ class _DriverShellState extends State<DriverShell> {
   @override
   void initState() {
     super.initState();
-    // Populate the dashboard: earnings + the driver's posted rides.
+    // Populate the dashboard: earnings + the driver's posted rides, and sync
+    // the online toggle to the driver's stored availability.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<MyRidesCubit>().load();
       context.read<EarningsCubit>().load();
+      context.read<AppModeCubit>().setOnline(widget.user.isOnline);
     });
   }
 

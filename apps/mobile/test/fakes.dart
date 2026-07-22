@@ -133,6 +133,25 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<User> setOnline(bool online) async {
+    final base = sessionUser ?? demoUser;
+    final updated = User(
+      id: base.id,
+      phone: base.phone,
+      role: base.role,
+      verified: base.verified,
+      city: base.city,
+      name: base.name,
+      gender: base.gender,
+      cnicMasked: base.cnicMasked,
+      emergencyPhone: base.emergencyPhone,
+      isOnline: online,
+    );
+    sessionUser = updated;
+    return updated;
+  }
+
+  @override
   Future<void> logout() async => sessionUser = null;
 }
 

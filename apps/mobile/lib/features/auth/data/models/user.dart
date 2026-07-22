@@ -12,6 +12,7 @@ class User extends Equatable {
     this.gender,
     this.cnicMasked,
     this.emergencyPhone,
+    this.isOnline = true,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -25,6 +26,7 @@ class User extends Equatable {
         gender: json['gender'] as String?,
         cnicMasked: json['cnicMasked'] as String?,
         emergencyPhone: json['emergencyPhone'] as String?,
+        isOnline: json['isOnline'] as bool? ?? true,
       );
 
   final String id;
@@ -37,6 +39,7 @@ class User extends Equatable {
   final String? gender;
   final String? cnicMasked;
   final String? emergencyPhone;
+  final bool isOnline;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -48,6 +51,7 @@ class User extends Equatable {
         'gender': gender,
         'cnicMasked': cnicMasked,
         'emergencyPhone': emergencyPhone,
+        'isOnline': isOnline,
       };
 
   bool get isDriver => role == 'driver' || role == 'both';
@@ -56,6 +60,8 @@ class User extends Equatable {
   String get handle => name ?? phone ?? email ?? 'You';
 
   @override
-  List<Object?> get props =>
-      [id, phone, email, role, verified, city, name, gender, cnicMasked, emergencyPhone];
+  List<Object?> get props => [
+        id, phone, email, role, verified, city, name, gender, cnicMasked,
+        emergencyPhone, isOnline
+      ];
 }

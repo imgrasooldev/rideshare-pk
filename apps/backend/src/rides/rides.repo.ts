@@ -165,6 +165,7 @@ export class PgRideRepository implements RideRepository {
       SELECT ${COLS_R} FROM rides r LEFT JOIN users u ON u.id = r.driver_id
       WHERE r.status = 'open'
         AND r.seats_available > 0
+        AND COALESCE(u.is_online, true) = true
         AND r.depart_at BETWEEN $6 AND $7
         AND ST_DWithin(r.origin_geo, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
         AND ST_DWithin(r.dest_geo,   ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)`;

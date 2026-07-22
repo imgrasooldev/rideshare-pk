@@ -19,6 +19,7 @@ export interface ProfileView {
   ratingAvg: number;
   ratingCount: number;
   emergencyPhone: string | null;
+  isOnline: boolean;
 }
 
 export interface UpdateMeInput {
@@ -70,6 +71,12 @@ export class UsersService {
     return this.toView(updated);
   }
 
+  async setOnline(userId: string, online: boolean): Promise<ProfileView> {
+    const updated = await this.users.setOnline(userId, online);
+    if (!updated) throw new NotFoundException("User not found");
+    return this.toView(updated);
+  }
+
   private toView(user: UserRecord): ProfileView {
     let cnicMasked: string | null = null;
     if (user.cnic) {
@@ -92,7 +99,8 @@ export class UsersService {
       city: user.city,
       ratingAvg: user.ratingAvg,
       ratingCount: user.ratingCount,
-      emergencyPhone: user.emergencyPhone
+      emergencyPhone: user.emergencyPhone,
+      isOnline: user.isOnline
     };
   }
 }

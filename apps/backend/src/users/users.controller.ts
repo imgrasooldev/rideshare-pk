@@ -26,4 +26,11 @@ export class UsersController {
   update(@Req() req: AuthedRequest, @Body() body: unknown) {
     return this.users.updateMe(req.user.sub, parse(updateMeDto, body));
   }
+
+  // Driver availability: offline pauses their rides (hidden from search).
+  @Patch("online")
+  setOnline(@Req() req: AuthedRequest, @Body() body: unknown) {
+    const dto = parse(z.object({ online: z.boolean() }), body);
+    return this.users.setOnline(req.user.sub, dto.online);
+  }
 }

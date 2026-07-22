@@ -20,6 +20,8 @@ export interface UserRecord {
   ratingAvg: number;
   ratingCount: number;
   emergencyPhone: string | null;
+  /** Driver availability — offline hides their rides from search. */
+  isOnline: boolean;
 }
 
 export interface ProfilePatch {
@@ -49,12 +51,13 @@ export interface UserRepository {
   updateProfile(id: string, patch: ProfilePatch): Promise<UserRecord | null>;
   setVerified(id: string, verified: boolean): Promise<void>;
   setAdmin(id: string, isAdmin: boolean): Promise<void>;
+  setOnline(id: string, online: boolean): Promise<UserRecord | null>;
 }
 
 const COLS = `id, phone, email, email_verified AS "emailVerified", password_hash AS "passwordHash",
   name, role, gender, cnic, verified, is_admin AS "isAdmin", city,
   rating_avg::float8 AS "ratingAvg", rating_count AS "ratingCount",
-  emergency_phone AS "emergencyPhone"`;
+  emergency_phone AS "emergencyPhone", is_online AS "isOnline"`;
 
 export class PgUserRepository implements UserRepository {
   constructor(private readonly pool: Pool) {}
@@ -145,6 +148,14 @@ export class PgUserRepository implements UserRepository {
       isAdmin
     ]);
   }
+
+  async setOnline(id: string, online: boolean): Promise<UserRecord | null> {
+    const { rows } = await this.pool.query(
+      `UPDATE users SET is_online = $2, updated_at = now() WHERE id = $1 RETURNING ${COLS}`,
+      [id, online]
+    );
+    return rows[0] ?? null;
+  }
 }
 
 export class InMemoryUserRepository implements UserRepository {
@@ -176,7 +187,8 @@ export class InMemoryUserRepository implements UserRepository {
       city,
       ratingAvg: 0,
       ratingCount: 0,
-      emergencyPhone: null
+      emergencyPhone: null,
+      isOnline: true
     };
   }
 
@@ -231,5 +243,11 @@ export class InMemoryUserRepository implements UserRepository {
   async setAdmin(id: string, isAdmin: boolean): Promise<void> {
     const user = await this.findById(id);
     if (user) user.isAdmin = isAdmin;
+  }
+
+  async setOnline(id: string, online: boolean): Promise<UserRecord | null> {
+    const user = await this.findById(id);
+    if (user) user.isOnline = online;
+    return user;
   }
 }
