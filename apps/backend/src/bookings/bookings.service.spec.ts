@@ -1,6 +1,8 @@
 ﻿import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryNotificationRepository } from "../notifications/notifications.repo.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
+import { PushService } from "../push/push.service.js";
+import type { AppConfig } from "../config/config.js";
 import { InMemoryRideRepository, type RideRecord } from "../rides/rides.repo.js";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryBookingRepository } from "./bookings.repo.js";
@@ -43,7 +45,10 @@ describe("BookingsService", () => {
       new InMemoryBookingRepository(rides),
       rides,
       users,
-      new NotificationsService(new InMemoryNotificationRepository())
+      new NotificationsService(
+        new InMemoryNotificationRepository(),
+        new PushService(null, { FIREBASE_SERVICE_ACCOUNT: "", FIREBASE_PROJECT_ID: "" } as AppConfig)
+      )
     );
     driverId = (await users.upsertByPhone("+923001111111", "lahore")).id;
     riderId = (await users.upsertByPhone("+923002222222", "lahore")).id;

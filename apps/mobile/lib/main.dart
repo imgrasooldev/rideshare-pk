@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 import 'app.dart';
 import 'core/network/api_client.dart';
+import 'core/push/push_service.dart';
 import 'features/app_mode/app_mode_cubit.dart';
 import 'core/storage/token_storage.dart';
 import 'features/auth/bloc/auth_bloc.dart';
@@ -38,7 +42,7 @@ import 'features/vehicles/data/vehicles_repository.dart';
 import 'features/wallet/bloc/wallet_cubit.dart';
 import 'features/wallet/data/wallet_repository.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Semantics on from the start: screen-reader accessible, and testable
   // through the accessibility tree on web.
@@ -48,6 +52,22 @@ void main() {
   final storage = TokenStorage();
   final api = ApiClient(storage);
   final authRepository = AuthRepository(api, storage);
+
+  // Firebase Cloud Messaging (best-effort; a missing config never blocks boot).
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
+  } catch (_) {
+    /* push unavailable — the app runs fine without it */
+  }
+  final push = PushService(api);
+
+  // Own the AuthBloc here so the device can register for push on login.
+  final authBloc = AuthBloc(authRepository)..add(const AuthStarted());
+  api.onSessionExpired = () => authBloc.add(const AuthLogoutRequested());
+  authBloc.stream.listen((state) {
+    if (state is AuthAuthenticated) push.register();
+  });
 
   runApp(
     MultiRepositoryProvider(
@@ -68,14 +88,7 @@ void main() {
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(
-            create: (context) {
-              final bloc = AuthBloc(context.read<AuthRepository>())..add(const AuthStarted());
-              // A failed token refresh anywhere logs the user out globally.
-              api.onSessionExpired = () => bloc.add(const AuthLogoutRequested());
-              return bloc;
-            },
-          ),
+          BlocProvider.value(value: authBloc),
           BlocProvider(create: (context) => AppModeCubit()),
           BlocProvider(create: (context) => RideSearchBloc(context.read<RidesRepository>())),
           BlocProvider(create: (context) => PlacesCubit(context.read<PlacesRepository>())),

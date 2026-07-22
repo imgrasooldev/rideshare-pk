@@ -1,11 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { NOTIFICATION_REPOSITORY } from "../shared/tokens.js";
+import { PushService } from "../push/push.service.js";
 import type { NotificationRecord, NotificationRepository } from "./notifications.repo.js";
 
 @Injectable()
 export class NotificationsService {
   constructor(
-    @Inject(NOTIFICATION_REPOSITORY) private readonly repo: NotificationRepository
+    @Inject(NOTIFICATION_REPOSITORY) private readonly repo: NotificationRepository,
+    private readonly push: PushService
   ) {}
 
   /** Fire-and-forget: a notification failure must never break the source action. */
@@ -18,10 +20,13 @@ export class NotificationsService {
   ): Promise<void> {
     try {
       await this.repo.create(userId, type, title, body, data);
-      // FCM push delivery hooks in here once a service account is configured.
     } catch {
       /* swallow */
     }
+    // Best-effort push (no-op until a Firebase service account is configured).
+    const stringData: Record<string, string> = { type };
+    for (const [k, v] of Object.entries(data)) stringData[k] = String(v);
+    void this.push.sendToUser(userId, title, body, stringData);
   }
 
   list(userId: string, limit: number): Promise<NotificationRecord[]> {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'core/push/push_service.dart' show scaffoldMessengerKey;
 import 'core/theme/app_theme.dart';
 import 'features/app_mode/app_mode_cubit.dart';
 import 'features/auth/bloc/auth_bloc.dart';
@@ -18,6 +19,7 @@ class RideshareApp extends StatelessWidget {
     return MaterialApp(
       title: 'Rideshare PK',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,

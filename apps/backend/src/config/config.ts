@@ -57,6 +57,12 @@ const envSchema = z.object({
   MAPS_PROVIDER: z.enum(["osm", "google"]).default("osm"),
   CITY_DEFAULT: z.string().default("lahore"),
 
+  // Firebase Cloud Messaging (push). Delivery is disabled until the server
+  // service-account JSON is provided; the client + token registration work
+  // regardless. FIREBASE_SERVICE_ACCOUNT holds the full service-account JSON.
+  FIREBASE_PROJECT_ID: z.string().default("rideshare-d39d0"),
+  FIREBASE_SERVICE_ACCOUNT: z.string().default(""),
+
   FEATURE_BOOKING_ACCEPT_DECLINE: envBool(false),
   FEATURE_PAYMENTS: envBool(false),
   FEATURE_LADIES_ONLY: envBool(true),
