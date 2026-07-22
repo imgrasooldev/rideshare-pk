@@ -32,7 +32,19 @@ const envSchema = z.object({
 
   OTP_TTL: z.coerce.number().int().positive().default(300),
   OTP_MAX_REQUESTS_PER_HOUR: z.coerce.number().int().positive().default(3),
+  // true = OTP is logged and echoed in the API response (local/E2E only).
+  // MUST be false in production once a real SMS provider is configured.
   OTP_DEV_MODE: envBool(true),
+
+  // OTP delivery. "dev" logs only; the others need their credentials below,
+  // and fall back to logging (with a warning) if those are missing.
+  SMS_PROVIDER: z.enum(["dev", "veevotech", "twilio"]).default("dev"),
+  SMS_API_KEY: z.string().default(""), // VeevoTech account hash
+  SMS_SENDER_ID: z.string().default("RideshrPK"), // PTA-approved sender mask
+  TWILIO_ACCOUNT_SID: z.string().default(""),
+  TWILIO_AUTH_TOKEN: z.string().default(""),
+  TWILIO_FROM: z.string().default(""),
+  TWILIO_CHANNEL: z.enum(["sms", "whatsapp"]).default("sms"),
 
   MAPS_PROVIDER: z.enum(["osm", "google"]).default("osm"),
   CITY_DEFAULT: z.string().default("lahore"),

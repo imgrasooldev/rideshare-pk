@@ -30,6 +30,21 @@ describe("OtpService", () => {
     await expect(service.verifyOtp(PHONE, devCode!)).rejects.toThrow(/Invalid or expired/);
   });
 
+  it("never echoes the code once a real SMS provider is configured", async () => {
+    const sent: Array<{ phone: string; code: string }> = [];
+    const service = new OtpService(
+      // Dev mode left ON deliberately — the provider check must still win.
+      loadConfig({ OTP_DEV_MODE: "true", SMS_PROVIDER: "veevotech", SMS_API_KEY: "hash" }),
+      new InMemoryKvStore(),
+      { sendOtp: async (phone, code) => void sent.push({ phone, code }) }
+    );
+
+    const result = await service.requestOtp(PHONE);
+    expect(result.devCode).toBeUndefined(); // not leaked to the caller
+    expect(sent).toHaveLength(1); // but genuinely dispatched
+    await expect(service.verifyOtp(PHONE, sent[0]!.code)).resolves.toBe("+923001234567");
+  });
+
   it("rejects invalid phone numbers", async () => {
     const { service } = makeService();
     await expect(service.requestOtp("12345")).rejects.toThrow(/valid Pakistani mobile/);

@@ -50,8 +50,11 @@ export class OtpService {
     await this.sms.sendOtp(phone, code);
 
     // Dev mode surfaces the code in the response so local/E2E flows work
-    // without an SMS provider. Never enabled in production.
-    return this.config.OTP_DEV_MODE ? { devCode: code } : {};
+    // without an SMS provider. Defence in depth: once a real provider is
+    // configured we never echo the code, so a forgotten OTP_DEV_MODE=true
+    // cannot leak live codes to anyone who can call the endpoint.
+    const echoCode = this.config.OTP_DEV_MODE && this.config.SMS_PROVIDER === "dev";
+    return echoCode ? { devCode: code } : {};
   }
 
   /** Returns the normalised phone on success; throws otherwise. */

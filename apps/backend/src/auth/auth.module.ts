@@ -6,7 +6,7 @@ import { AuthService } from "./auth.service.js";
 import { JwtAuthGuard } from "./jwt-auth.guard.js";
 import { RealOAuthVerifier } from "./oauth.verifier.js";
 import { OtpService } from "./otp.service.js";
-import { DevLogSmsSender } from "./sms.js";
+import { createSmsSender } from "./sms.js";
 import { TokenService } from "./token.service.js";
 
 @Module({
@@ -16,9 +16,12 @@ import { TokenService } from "./token.service.js";
     OtpService,
     TokenService,
     JwtAuthGuard,
-    // Real SMS aggregator adapter replaces this via config with the
-    // notifications module (build step 7+).
-    { provide: SMS_SENDER, useClass: DevLogSmsSender },
+    // Provider chosen by SMS_PROVIDER at boot (dev | veevotech | twilio).
+    {
+      provide: SMS_SENDER,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => createSmsSender(config)
+    },
     {
       provide: OAUTH_VERIFIER,
       inject: [APP_CONFIG],
