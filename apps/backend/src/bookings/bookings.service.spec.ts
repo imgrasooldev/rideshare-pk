@@ -1,4 +1,6 @@
 ﻿import { beforeEach, describe, expect, it } from "vitest";
+import { InMemoryNotificationRepository } from "../notifications/notifications.repo.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import { InMemoryRideRepository, type RideRecord } from "../rides/rides.repo.js";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryBookingRepository } from "./bookings.repo.js";
@@ -37,7 +39,12 @@ describe("BookingsService", () => {
   beforeEach(async () => {
     users = new InMemoryUserRepository();
     rides = new InMemoryRideRepository();
-    service = new BookingsService(new InMemoryBookingRepository(rides), rides, users);
+    service = new BookingsService(
+      new InMemoryBookingRepository(rides),
+      rides,
+      users,
+      new NotificationsService(new InMemoryNotificationRepository())
+    );
     driverId = (await users.upsertByPhone("+923001111111", "lahore")).id;
     riderId = (await users.upsertByPhone("+923002222222", "lahore")).id;
     ride = await makeRide();
