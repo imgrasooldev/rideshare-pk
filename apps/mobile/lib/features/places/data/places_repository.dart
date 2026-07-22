@@ -26,6 +26,22 @@ class PlacesRepository {
         .toList();
   }
 
+  /// Free-text address search (OpenStreetMap geocoding via the backend).
+  Future<List<Hub>> search(String query, {String? city}) async {
+    if (query.trim().length < 3) return [];
+    final res = await _api.getList('/places/search', query: {
+      'q': query.trim(),
+      'city': ?city,
+    });
+    return res
+        .map((e) => Hub(
+              e['label'] as String,
+              (e['lat'] as num).toDouble(),
+              (e['lng'] as num).toDouble(),
+            ))
+        .toList();
+  }
+
   Future<List<City>> cities() async {
     final res = await _api.getList('/cities');
     return res

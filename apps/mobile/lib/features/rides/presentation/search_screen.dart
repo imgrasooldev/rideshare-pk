@@ -11,6 +11,7 @@ import '../../bookings/bloc/booking_action_cubit.dart';
 import '../../categories/bloc/categories_cubit.dart';
 import '../../messages/presentation/chat_screen.dart';
 import '../../places/bloc/places_cubit.dart';
+import '../../places/presentation/place_picker.dart';
 import '../../subscriptions/data/subscriptions_repository.dart';
 import '../bloc/ride_search_bloc.dart';
 import '../data/models/ride.dart';
@@ -103,13 +104,10 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Padding(padding: EdgeInsets.all(48), child: CircularProgressIndicator()),
       );
     }
-    // Default (or reset on city switch) to the loaded hubs.
-    if (_pickup == null || !hubs.contains(_pickup)) {
-      _pickup = hubs.length > 1 ? hubs[1] : hubs.first;
-    }
-    if (_drop == null || !hubs.contains(_drop)) {
-      _drop = hubs.first;
-    }
+    // Seed sensible defaults from the curated hubs; a custom searched address
+    // (not in the hub list) is preserved instead of being reset.
+    _pickup ??= hubs.length > 1 ? hubs[1] : hubs.first;
+    _drop ??= hubs.first;
     return BlocListener<BookingActionCubit, BookingActionState>(
       listener: (context, state) {
         final messenger = ScaffoldMessenger.of(context);
@@ -285,9 +283,11 @@ class _SearchForm extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      _HubDropdown(label: 'Pickup', value: pickup, hubs: hubs, onChanged: onPickup),
+                      _PlaceField(
+                          label: 'Pickup', value: pickup, hubs: hubs, onChanged: onPickup),
                       const SizedBox(height: 12),
-                      _HubDropdown(label: 'Drop-off', value: drop, hubs: hubs, onChanged: onDrop),
+                      _PlaceField(
+                          label: 'Drop-off', value: drop, hubs: hubs, onChanged: onDrop),
                     ],
                   ),
                 ),
@@ -330,8 +330,10 @@ class _SearchForm extends StatelessWidget {
   }
 }
 
-class _HubDropdown extends StatelessWidget {
-  const _HubDropdown({
+/// A tappable pickup/drop field that opens the address search (any address),
+/// with the curated hubs offered as quick suggestions.
+class _PlaceField extends StatelessWidget {
+  const _PlaceField({
     required this.label,
     required this.value,
     required this.hubs,
@@ -345,21 +347,32 @@ class _HubDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<Hub>(
-      initialValue: value,
-      isExpanded: true,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-      items: [
-        for (final hub in hubs)
-          DropdownMenuItem(value: hub, child: Text(hub.label, overflow: TextOverflow.ellipsis)),
-      ],
-      onChanged: (h) {
-        if (h != null) onChanged(h);
+    final theme = Theme.of(context);
+    final isPickup = label == 'Pickup';
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        final city = context.read<PlacesCubit>().state.city;
+        final picked =
+            await showPlacePicker(context, title: label, hubs: hubs, city: city);
+        if (picked != null) onChanged(picked);
       },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          prefixIcon: Icon(
+            isPickup ? Icons.trip_origin_rounded : Icons.place_rounded,
+            size: 18,
+            color: isPickup ? const Color(0xFF12A46B) : theme.colorScheme.primary,
+          ),
+        ),
+        child: Text(value.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium),
+      ),
     );
   }
 }

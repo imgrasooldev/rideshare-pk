@@ -16,4 +16,10 @@ export class PlacesController {
   hubs(@Query("city") city?: string) {
     return this.places.hubs((city ?? "lahore").trim().toLowerCase());
   }
+
+  // Free-text address search (any address, not just curated hubs).
+  @Get("places/search")
+  search(@Query("q") q?: string, @Query("city") city?: string) {
+    return this.places.search((q ?? "").trim(), city?.trim());
+  }
 }

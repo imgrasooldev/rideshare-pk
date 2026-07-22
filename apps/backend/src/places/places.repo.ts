@@ -17,6 +17,12 @@ export interface Hub {
   lng: number;
 }
 
+export interface PlaceHit {
+  label: string;
+  lat: number;
+  lng: number;
+}
+
 // Zero-infra dev fallback so the endpoints still return something without a DB.
 const FALLBACK_CITIES: City[] = [
   { slug: "karachi", name: "Karachi", centerLat: 24.8607, centerLng: 67.0011 },
@@ -56,4 +62,45 @@ export class PlacesRepository {
     );
     return rows;
   }
+
+  /**
+   * Free-text address search via OpenStreetMap Nominatim (no API key). Biased
+   * to Pakistan and the given city. Best-effort — returns [] on any failure so
+   * the app degrades to the curated hubs instead of erroring.
+   */
+  async search(q: string, city?: string): Promise<PlaceHit[]> {
+    const term = q.trim();
+    if (term.length < 3) return [];
+    const query = city ? `${term}, ${city}, Pakistan` : `${term}, Pakistan`;
+    const url =
+      "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=pk&q=" +
+      encodeURIComponent(query);
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "RidesharePK/1.0 (support@rideshare.pk)" },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as Array<{
+        display_name?: string;
+        lat?: string;
+        lon?: string;
+      }>;
+      return data
+        .filter((d) => d.lat && d.lon)
+        .map((d) => ({
+          label: shortenLabel(d.display_name ?? ""),
+          lat: Number(d.lat),
+          lng: Number(d.lon)
+        }));
+    } catch {
+      return [];
+    }
+  }
+}
+
+/** Nominatim display names are long; keep the first few meaningful parts. */
+function shortenLabel(displayName: string): string {
+  const parts = displayName.split(",").map((p) => p.trim());
+  return parts.slice(0, 3).join(", ");
 }
