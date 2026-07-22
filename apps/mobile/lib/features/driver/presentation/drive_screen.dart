@@ -6,6 +6,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/seat_map.dart';
 import '../../../core/widgets/status_pill.dart';
+import '../../bookings/presentation/passengers_screen.dart';
 import '../../rides/data/rides_repository.dart';
 import '../../earnings/bloc/earnings_cubit.dart';
 import '../../earnings/data/earnings_repository.dart';
@@ -367,11 +368,26 @@ class _RideCard extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => _manageSeats(context),
-                      icon: const Icon(Icons.event_seat_rounded, size: 18),
-                      label: const Text('Manage seats'),
+                      icon: const Icon(Icons.event_seat_rounded, size: 16),
+                      label: const Text('Seats'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => PassengersScreen(
+                            rideId: ride.id as String,
+                            routeLabel: '${ride.originLabel} → ${ride.destLabel}',
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.people_alt_rounded, size: 16),
+                      label: const Text('Riders'),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: FilledButton.tonalIcon(
                       onPressed: () => Navigator.of(context).push(
@@ -379,7 +395,7 @@ class _RideCard extends StatelessWidget {
                           builder: (_) => LiveTripPage(mode: LiveTripMode.driver, ride: ride),
                         ),
                       ),
-                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
                       label: const Text('Start'),
                     ),
                   ),

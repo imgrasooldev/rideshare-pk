@@ -16,10 +16,11 @@ final class MyBookingsRequested extends MyBookingsEvent {
 }
 
 final class BookingCancelPressed extends MyBookingsEvent {
-  const BookingCancelPressed(this.bookingId);
+  const BookingCancelPressed(this.bookingId, {this.reason});
   final String bookingId;
+  final String? reason;
   @override
-  List<Object?> get props => [bookingId];
+  List<Object?> get props => [bookingId, reason];
 }
 
 /// Rider accepts/declines a driver's counter-offer.
@@ -80,7 +81,7 @@ class MyBookingsBloc extends Bloc<MyBookingsEvent, MyBookingsState> {
     if (current is! MyBookingsLoaded) return;
     emit(MyBookingsLoaded(current.bookings, cancelling: {...current.cancelling, event.bookingId}));
     try {
-      final cancelled = await _repo.cancel(event.bookingId);
+      final cancelled = await _repo.cancel(event.bookingId, reason: event.reason);
       final updated = current.bookings
           .map((b) => b.id == cancelled.id
               ? Booking(

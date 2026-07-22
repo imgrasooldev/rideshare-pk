@@ -12,6 +12,7 @@ const bookDto = z.object({
 
 const counterDto = z.object({ offeredPrice: z.number().int().min(0).max(100_000) });
 const respondDto = z.object({ accept: z.boolean() });
+const cancelDto = z.object({ reason: z.string().trim().max(200).optional() });
 
 @Controller("bookings")
 @UseGuards(JwtAuthGuard)
@@ -65,7 +66,21 @@ export class BookingsController {
 
   @Post(":id/cancel")
   @HttpCode(200)
-  cancel(@Req() req: AuthedRequest, @Param("id") id: string) {
-    return this.bookings.cancel(id, req.user.sub);
+  cancel(@Req() req: AuthedRequest, @Param("id") id: string, @Body() body: unknown) {
+    const dto = parse(cancelDto, body ?? {});
+    return this.bookings.cancel(id, req.user.sub, dto.reason);
+  }
+
+  /** Driver marks a confirmed rider a no-show. */
+  @Post(":id/no-show")
+  @HttpCode(200)
+  noShow(@Req() req: AuthedRequest, @Param("id") id: string) {
+    return this.bookings.noShow(req.user.sub, id);
+  }
+
+  /** Driver's confirmed passenger manifest for one ride. */
+  @Get("for-ride/:rideId")
+  ridePassengers(@Req() req: AuthedRequest, @Param("rideId") rideId: string) {
+    return this.bookings.ridePassengers(req.user.sub, rideId);
   }
 }

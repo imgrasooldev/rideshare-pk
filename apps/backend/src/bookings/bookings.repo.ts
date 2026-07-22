@@ -8,7 +8,8 @@ export type BookingStatus =
   | "confirmed"
   | "rejected"
   | "cancelled"
-  | "completed";
+  | "completed"
+  | "no_show";
 
 export interface BookingRecord {
   id: string;
@@ -43,7 +44,11 @@ export interface BookingRepository {
    */
   create(riderId: string, rideId: string, seats: number, idempotencyKey: string): Promise<BookingRecord>;
   /** Cancel own booking; restores seats only if it was confirmed. */
-  cancel(bookingId: string, riderId: string): Promise<BookingRecord>;
+  cancel(bookingId: string, riderId: string, reason?: string): Promise<BookingRecord>;
+  /** Driver marks a confirmed rider a no-show; frees the seat. */
+  noShow(bookingId: string, driverId: string): Promise<BookingRecord>;
+  /** Confirmed passengers on a driver's ride (their manifest). */
+  listForRide(rideId: string, driverId: string): Promise<DriverRequest[]>;
   /** Driver accepts a request → race-safe seat decrement + confirm. */
   accept(bookingId: string, driverId: string): Promise<BookingRecord>;
   /** Driver rejects a request. */
@@ -208,7 +213,7 @@ export class PgBookingRepository implements BookingRepository {
     return rows[0];
   }
 
-  async cancel(bookingId: string, riderId: string): Promise<BookingRecord> {
+  async cancel(bookingId: string, riderId: string, reason?: string): Promise<BookingRecord> {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
@@ -224,9 +229,9 @@ export class PgBookingRepository implements BookingRepository {
         throw new NotFoundException("Booking not found, not yours, or already finished");
       }
       const upd = await client.query(
-        `UPDATE bookings SET status = 'cancelled', updated_at = now()
+        `UPDATE bookings SET status = 'cancelled', cancel_reason = $2, updated_at = now()
          WHERE id = $1 RETURNING ${B_COLS}`,
-        [bookingId]
+        [bookingId, reason ?? null]
       );
       if (cur.status === "confirmed") {
         await client.query(
@@ -245,6 +250,79 @@ export class PgBookingRepository implements BookingRepository {
     } finally {
       client.release();
     }
+  }
+
+  async noShow(bookingId: string, driverId: string): Promise<BookingRecord> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const sel = await client.query(
+        `SELECT b.status, b.ride_id, b.seats
+         FROM bookings b JOIN rides r ON r.id = b.ride_id
+         WHERE b.id = $1 AND r.driver_id = $2 FOR UPDATE OF b`,
+        [bookingId, driverId]
+      );
+      const cur = sel.rows[0];
+      if (!cur) {
+        await client.query("ROLLBACK");
+        throw new NotFoundException("Booking not found or not on your ride");
+      }
+      if (cur.status !== "confirmed") {
+        await client.query("ROLLBACK");
+        throw new ConflictException("Only a confirmed booking can be marked no-show");
+      }
+      const upd = await client.query(
+        `UPDATE bookings SET status = 'no_show', updated_at = now() WHERE id = $1 RETURNING ${B_COLS}`,
+        [bookingId]
+      );
+      await client.query(
+        `UPDATE rides SET seats_available = seats_available + $2,
+           status = CASE WHEN status = 'full' THEN 'open' ELSE status END, updated_at = now()
+         WHERE id = $1`,
+        [cur.ride_id, cur.seats]
+      );
+      await client.query("COMMIT");
+      return upd.rows[0];
+    } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async listForRide(rideId: string, driverId: string): Promise<DriverRequest[]> {
+    const { rows } = await this.pool.query(
+      `SELECT b.id, b.ride_id AS "rideId", b.rider_id AS "riderId", b.seats, b.status,
+              b.offered_price AS "offeredPrice", b.idempotency_key AS "idempotencyKey",
+              b.created_at AS "createdAt",
+              r.origin_label AS "originLabel", r.dest_label AS "destLabel",
+              r.depart_at AS "departAt", r.price_per_seat AS "pricePerSeat",
+              u.name AS "riderName"
+       FROM bookings b
+       JOIN rides r ON r.id = b.ride_id
+       JOIN users u ON u.id = b.rider_id
+       WHERE b.ride_id = $1 AND r.driver_id = $2 AND b.status = 'confirmed'
+       ORDER BY b.created_at`,
+      [rideId, driverId]
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      rideId: r.rideId,
+      riderId: r.riderId,
+      seats: r.seats,
+      status: r.status,
+      offeredPrice: r.offeredPrice,
+      idempotencyKey: r.idempotencyKey,
+      createdAt: r.createdAt,
+      riderName: r.riderName,
+      ride: {
+        originLabel: r.originLabel,
+        destLabel: r.destLabel,
+        departAt: r.departAt,
+        pricePerSeat: r.pricePerSeat
+      }
+    }));
   }
 
   async hasBookingForRide(riderId: string, rideId: string): Promise<boolean> {
@@ -422,7 +500,7 @@ export class InMemoryBookingRepository implements BookingRepository {
     return b;
   }
 
-  async cancel(bookingId: string, riderId: string): Promise<BookingRecord> {
+  async cancel(bookingId: string, riderId: string, _reason?: string): Promise<BookingRecord> {
     const b = this.items.get(bookingId);
     if (
       !b ||
@@ -441,6 +519,32 @@ export class InMemoryBookingRepository implements BookingRepository {
       }
     }
     return b;
+  }
+
+  async noShow(bookingId: string, driverId: string): Promise<BookingRecord> {
+    const b = this.items.get(bookingId);
+    const ride = b ? await this.rides.findById(b.rideId) : null;
+    if (!b || !ride || ride.driverId !== driverId) {
+      throw new NotFoundException("Booking not found or not on your ride");
+    }
+    if (b.status !== "confirmed") {
+      throw new ConflictException("Only a confirmed booking can be marked no-show");
+    }
+    b.status = "no_show";
+    ride.seatsAvailable += b.seats;
+    if (ride.status === "full") ride.status = "open";
+    return b;
+  }
+
+  async listForRide(rideId: string, driverId: string): Promise<DriverRequest[]> {
+    const out: DriverRequest[] = [];
+    for (const b of this.items.values()) {
+      if (b.rideId !== rideId || b.status !== "confirmed") continue;
+      const ride = await this.rides.findById(b.rideId);
+      if (!ride || ride.driverId !== driverId) continue;
+      out.push({ ...b, ride: b._ride, riderName: null });
+    }
+    return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
   async hasBookingForRide(riderId: string, rideId: string): Promise<boolean> {

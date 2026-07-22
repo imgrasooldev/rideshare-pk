@@ -155,9 +155,7 @@ class _BookingCard extends StatelessWidget {
                     style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
                     onPressed: cancelling
                         ? null
-                        : () => context
-                            .read<MyBookingsBloc>()
-                            .add(BookingCancelPressed(booking.id)),
+                        : () => _cancelWithReason(context, booking.id),
                     child: Text(cancelling ? 'Cancelling…' : 'Cancel'),
                   ),
                 ],
@@ -189,9 +187,7 @@ class _BookingCard extends StatelessWidget {
                     style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
                     onPressed: cancelling
                         ? null
-                        : () => context
-                            .read<MyBookingsBloc>()
-                            .add(BookingCancelPressed(booking.id)),
+                        : () => _cancelWithReason(context, booking.id),
                     child: Text(cancelling ? 'Cancelling…' : 'Cancel booking'),
                   ),
                 ],
@@ -202,4 +198,46 @@ class _BookingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+const _cancelReasons = [
+  'Changed my plans',
+  'Found another ride',
+  'Departure time changed',
+  'Driver too far',
+  'Price too high',
+  'Other',
+];
+
+/// Asks a quick reason, then dispatches the cancel. Free to cancel — the
+/// reason just helps improve the marketplace.
+Future<void> _cancelWithReason(BuildContext context, String bookingId) async {
+  final bloc = context.read<MyBookingsBloc>();
+  final reason = await showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+            child: Text('Why are you cancelling?',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text('Free to cancel. Frequent last-minute cancellations may limit your account.',
+                style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ),
+          for (final r in _cancelReasons)
+            ListTile(title: Text(r), onTap: () => Navigator.pop(ctx, r)),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+  if (reason == null) return; // dismissed — don't cancel
+  bloc.add(BookingCancelPressed(bookingId, reason: reason));
 }

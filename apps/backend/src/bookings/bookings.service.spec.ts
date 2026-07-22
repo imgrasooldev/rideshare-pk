@@ -125,6 +125,15 @@ describe("BookingsService", () => {
     expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
   });
 
+  it("driver marks a confirmed rider a no-show, freeing the seat", async () => {
+    const b = await service.book(riderId, ride.id, 1, "ns1");
+    await service.respond(driverId, b.id, "accept");
+    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
+    const ns = await service.noShow(driverId, b.id);
+    expect(ns.status).toBe("no_show");
+    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(3);
+  });
+
   it("ladies-only rides are requestable only by women", async () => {
     const lo = await makeRide({ ladiesOnly: true });
     await expect(service.book(riderId, lo.id, 1, "k5")).rejects.toThrow(/ladies-only/);

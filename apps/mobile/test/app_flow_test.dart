@@ -334,6 +334,9 @@ void main() {
 
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
+    // Pick a cancellation reason from the sheet.
+    await tester.tap(find.text('Changed my plans'));
+    await tester.pumpAndSettle();
     expect(find.text('cancelled'), findsOneWidget);
     expect(bookings.bookings.single.status, 'cancelled');
   });

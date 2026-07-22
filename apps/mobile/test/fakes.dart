@@ -386,7 +386,13 @@ class FakeBookingsRepository implements BookingsRepository {
   Future<void> counter(String bookingId, int offeredPrice) async {}
 
   @override
-  Future<Booking> cancel(String bookingId) async {
+  Future<List<SeatRequest>> ridePassengers(String rideId) async => const [];
+
+  @override
+  Future<void> noShow(String bookingId) async {}
+
+  @override
+  Future<Booking> cancel(String bookingId, {String? reason}) async {
     final i = bookings.indexWhere((b) => b.id == bookingId);
     final b = bookings[i];
     final cancelled = Booking(

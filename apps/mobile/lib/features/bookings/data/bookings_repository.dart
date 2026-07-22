@@ -29,8 +29,18 @@ class BookingsRepository {
     return Booking.fromJson(res);
   }
 
-  Future<Booking> cancel(String bookingId) async =>
-      Booking.fromJson(await _api.post('/bookings/$bookingId/cancel'));
+  Future<Booking> cancel(String bookingId, {String? reason}) async => Booking.fromJson(
+      await _api.post('/bookings/$bookingId/cancel',
+          body: {if (reason != null && reason.isNotEmpty) 'reason': reason}));
+
+  /// Driver: confirmed passenger manifest for one ride.
+  Future<List<SeatRequest>> ridePassengers(String rideId) async {
+    final res = await _api.getList('/bookings/for-ride/$rideId');
+    return res.cast<Map<String, dynamic>>().map(SeatRequest.fromJson).toList();
+  }
+
+  /// Driver: mark a confirmed rider a no-show (frees the seat).
+  Future<void> noShow(String bookingId) => _api.post('/bookings/$bookingId/no-show');
 
   /// Rider accepts/declines a driver's counter-offer.
   Future<Booking> respondToCounter(String bookingId, bool accept) async => Booking.fromJson(

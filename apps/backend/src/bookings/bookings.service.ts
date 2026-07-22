@@ -57,8 +57,25 @@ export class BookingsService {
     return booking;
   }
 
-  cancel(bookingId: string, riderId: string): Promise<BookingRecord> {
-    return this.bookings.cancel(bookingId, riderId);
+  cancel(bookingId: string, riderId: string, reason?: string): Promise<BookingRecord> {
+    return this.bookings.cancel(bookingId, riderId, reason);
+  }
+
+  /** Driver marks a confirmed rider a no-show; frees the seat and notifies them. */
+  async noShow(driverId: string, bookingId: string): Promise<BookingRecord> {
+    const booking = await this.bookings.noShow(bookingId, driverId);
+    void this.notifications.notify(
+      booking.riderId,
+      "booking_update",
+      "Marked as no-show",
+      "The driver reported you didn't show up for the ride.",
+      { rideId: booking.rideId, bookingId: booking.id }
+    );
+    return booking;
+  }
+
+  ridePassengers(driverId: string, rideId: string): Promise<DriverRequest[]> {
+    return this.bookings.listForRide(rideId, driverId);
   }
 
   mine(riderId: string, cursor: string | null, limit: number): Promise<BookingPage> {
