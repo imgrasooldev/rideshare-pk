@@ -6,6 +6,7 @@ import 'package:intl/intl.dart' show DateFormat;
 import '../../app_mode/app_mode_cubit.dart';
 import '../../auth/data/models/user.dart';
 import '../../earnings/bloc/earnings_cubit.dart';
+import '../../wallet/presentation/wallet_screen.dart';
 import '../bloc/my_rides_cubit.dart';
 import 'post_ride_screen.dart';
 
@@ -292,6 +293,11 @@ class _QuickActions extends StatelessWidget {
         .showSnackBar(SnackBar(content: Text('$name is coming soon')));
   }
 
+  void _openWallet(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const WalletScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     final actions = <_Action>[
@@ -309,10 +315,10 @@ class _QuickActions extends StatelessWidget {
           const Color(0xFFE1F1FD), onOpenRides),
       _Action('Vehicles', Icons.directions_car_rounded, const Color(0xFF12A46B),
           const Color(0xFFDFF6EC), onOpenProfile),
-      _Action('Earnings', Icons.account_balance_wallet_rounded,
-          const Color(0xFFE19700), const Color(0xFFFFF3D6), onOpenRides),
-      _Action('Withdraw', Icons.payments_rounded, const Color(0xFF7C5AE0),
-          const Color(0xFFEDE9FD), () => _soon(context, 'Withdrawals')),
+      _Action('Wallet', Icons.account_balance_wallet_rounded, const Color(0xFFE19700),
+          const Color(0xFFFFF3D6), () => _openWallet(context)),
+      _Action('Earnings', Icons.trending_up_rounded, const Color(0xFF7C5AE0),
+          const Color(0xFFEDE9FD), onOpenRides),
       _Action('Support', Icons.headset_mic_rounded, const Color(0xFF0FA898),
           const Color(0xFFD9F5F0), () => _soon(context, 'Support')),
     ];

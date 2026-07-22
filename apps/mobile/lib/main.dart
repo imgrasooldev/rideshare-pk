@@ -34,6 +34,8 @@ import 'features/trust/bloc/verifications_cubit.dart';
 import 'features/trust/data/trust_repository.dart';
 import 'features/vehicles/bloc/vehicles_cubit.dart';
 import 'features/vehicles/data/vehicles_repository.dart';
+import 'features/wallet/bloc/wallet_cubit.dart';
+import 'features/wallet/data/wallet_repository.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +57,7 @@ void main() {
         RepositoryProvider(create: (_) => NotificationsRepository(api)),
         RepositoryProvider(create: (_) => SubscriptionsRepository(api)),
         RepositoryProvider(create: (_) => EarningsRepository(api)),
+        RepositoryProvider(create: (_) => WalletRepository(api)),
         RepositoryProvider(create: (_) => CategoriesRepository(api)),
         RepositoryProvider(create: (_) => MessagesRepository(api)),
         RepositoryProvider(create: (_) => BookingsRepository(api)),
@@ -80,6 +83,7 @@ void main() {
           BlocProvider(
               create: (context) => SubscriptionsCubit(context.read<SubscriptionsRepository>())),
           BlocProvider(create: (context) => EarningsCubit(context.read<EarningsRepository>())),
+          BlocProvider(create: (context) => WalletCubit(context.read<WalletRepository>())),
           BlocProvider(
               create: (context) =>
                   CategoriesCubit(context.read<CategoriesRepository>())..load()),

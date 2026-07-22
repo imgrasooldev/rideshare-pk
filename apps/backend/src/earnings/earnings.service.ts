@@ -1,11 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
 import { PG_POOL } from "../shared/tokens.js";
-
-// Cash-only: the driver collects the fare in cash and owes the marketplace a
-// commission on it. When a payment gateway is added this same number becomes an
-// automatic deduction instead of an offline settlement.
-const COMMISSION_RATE = 0.12;
+import { COMMISSION_RATE } from "../shared/commission.js";
 
 export interface EarningsSummary {
   today: number;

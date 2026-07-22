@@ -19,6 +19,7 @@ import { TrackingModule } from "./tracking/tracking.module.js";
 import { TrustModule } from "./trust/trust.module.js";
 import { UsersModule } from "./users/users.module.js";
 import { VehiclesModule } from "./vehicles/vehicles.module.js";
+import { WalletModule } from "./wallet/wallet.module.js";
 
 // The admin console (apps/admin, Vite build) is served at /admin when present.
 const adminDist = process.env.ADMIN_STATIC_DIR ?? join(process.cwd(), "..", "admin", "dist");
@@ -34,7 +35,8 @@ const adminDist = process.env.ADMIN_STATIC_DIR ?? join(process.cwd(), "..", "adm
     InfraModule, HealthModule, AuthModule, UsersModule,
     VehiclesModule, TrustModule, RidesModule, BookingsModule,
     TrackingModule, RatingsModule, PlacesModule, NotificationsModule,
-    SubscriptionsModule, EarningsModule, CategoriesModule, MessagesModule, StorageModule
+    SubscriptionsModule, EarningsModule, CategoriesModule, MessagesModule, StorageModule,
+    WalletModule
   ]
 })
 export class AppModule {}
