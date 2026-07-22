@@ -235,12 +235,12 @@ void main() {
     expect(find.text('Rs 250'), findsOneWidget);
     expect(find.textContaining('3 of 3 seats'), findsOneWidget);
 
-    await tester.tap(find.text('Book a seat'));
+    await tester.tap(find.text('Request seat'));
     await tester.pumpAndSettle();
 
     expect(bookings.bookings, hasLength(1));
     expect(bookings.bookings.single.rideId, 'r1');
-    expect(find.textContaining('Seat booked!'), findsOneWidget); // success snackbar
+    expect(find.textContaining('Request sent'), findsOneWidget); // success snackbar
   });
 
   testWidgets('full rides show as Full and cannot be booked', (tester) async {
@@ -322,16 +322,17 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Find rides'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Book a seat'));
+    await tester.tap(find.text('Request seat'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Bookings'));
     await tester.pumpAndSettle();
 
     expect(find.text('DHA Phase 5'), findsWidgets);
-    expect(find.text('confirmed'), findsOneWidget);
+    // A fresh booking is a pending request awaiting the driver.
+    expect(find.text('requested'), findsOneWidget);
 
-    await tester.tap(find.text('Cancel booking'));
+    await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(find.text('cancelled'), findsOneWidget);
     expect(bookings.bookings.single.status, 'cancelled');

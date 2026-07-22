@@ -1,12 +1,14 @@
 import 'package:equatable/equatable.dart';
 
-class Booking extends Equatable {
-  const Booking({
+/// A pending seat request as the driver sees it in their dispatch inbox.
+class SeatRequest extends Equatable {
+  const SeatRequest({
     required this.id,
     required this.rideId,
     required this.seats,
     required this.status,
     required this.createdAt,
+    this.riderName,
     this.originLabel,
     this.destLabel,
     this.departAt,
@@ -14,20 +16,22 @@ class Booking extends Equatable {
     this.offeredPrice,
   });
 
-  factory Booking.fromJson(Map<String, dynamic> json) {
+  factory SeatRequest.fromJson(Map<String, dynamic> json) {
     final ride = json['ride'] as Map<String, dynamic>?;
-    return Booking(
+    return SeatRequest(
       id: json['id'] as String,
       rideId: json['rideId'] as String,
-      seats: json['seats'] as int,
-      status: json['status'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
+      seats: json['seats'] as int? ?? 1,
+      status: json['status'] as String? ?? 'requested',
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '')?.toLocal() ??
+          DateTime.now(),
+      riderName: json['riderName'] as String?,
       originLabel: ride?['originLabel'] as String?,
       destLabel: ride?['destLabel'] as String?,
       departAt: ride?['departAt'] != null
-          ? DateTime.parse(ride!['departAt'] as String).toLocal()
+          ? DateTime.tryParse(ride!['departAt'] as String)?.toLocal()
           : null,
-      pricePerSeat: ride?['pricePerSeat'] as int?,
+      pricePerSeat: (ride?['pricePerSeat'] as num?)?.toInt(),
       offeredPrice: (json['offeredPrice'] as num?)?.toInt(),
     );
   }
@@ -35,25 +39,17 @@ class Booking extends Equatable {
   final String id;
   final String rideId;
   final int seats;
-  final String status;
+  final String status; // 'requested' | 'countered'
   final DateTime createdAt;
+  final String? riderName;
   final String? originLabel;
   final String? destLabel;
   final DateTime? departAt;
   final int? pricePerSeat;
-
-  /// Driver's counter-offer price/seat, when [status] == 'countered'.
   final int? offeredPrice;
 
-  bool get isActive =>
-      status == 'confirmed' || status == 'requested' || status == 'countered';
-
-  /// Effective price/seat (counter-offer wins when present).
   int? get effectivePrice => offeredPrice ?? pricePerSeat;
 
   @override
-  List<Object?> get props => [
-        id, rideId, seats, status, createdAt, originLabel, destLabel, departAt,
-        pricePerSeat, offeredPrice
-      ];
+  List<Object?> get props => [id, status, seats, offeredPrice, createdAt];
 }

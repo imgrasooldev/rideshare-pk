@@ -92,7 +92,77 @@ class _BookingCard extends StatelessWidget {
               ].join('  ·  '),
               style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
             ),
-            if (booking.isActive) ...[
+            if (booking.status == 'countered') ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF6E6),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFF3D9A6)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Driver counter-offered Rs ${booking.offeredPrice}/seat',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, color: Color(0xFF8A5A00))),
+                    if (booking.pricePerSeat != null)
+                      Text('Original: Rs ${booking.pricePerSeat}/seat',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFFA9803A))),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: cancelling
+                                ? null
+                                : () => context
+                                    .read<MyBookingsBloc>()
+                                    .add(BookingCounterResponded(booking.id, false)),
+                            child: const Text('Decline'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: cancelling
+                                ? null
+                                : () => context
+                                    .read<MyBookingsBloc>()
+                                    .add(BookingCounterResponded(booking.id, true)),
+                            child: Text(cancelling ? '…' : 'Accept Rs ${booking.offeredPrice}'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (booking.status == 'requested') ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.hourglass_top_rounded,
+                      size: 16, color: theme.colorScheme.outline),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text('Waiting for the driver to accept',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: theme.colorScheme.outline)),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                    onPressed: cancelling
+                        ? null
+                        : () => context
+                            .read<MyBookingsBloc>()
+                            .add(BookingCancelPressed(booking.id)),
+                    child: Text(cancelling ? 'Cancelling…' : 'Cancel'),
+                  ),
+                ],
+              ),
+            ] else if (booking.status == 'confirmed') ...[
               const SizedBox(height: 8),
               Row(
                 children: [

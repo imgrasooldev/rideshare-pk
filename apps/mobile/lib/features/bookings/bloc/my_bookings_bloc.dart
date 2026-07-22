@@ -22,6 +22,15 @@ final class BookingCancelPressed extends MyBookingsEvent {
   List<Object?> get props => [bookingId];
 }
 
+/// Rider accepts/declines a driver's counter-offer.
+final class BookingCounterResponded extends MyBookingsEvent {
+  const BookingCounterResponded(this.bookingId, this.accept);
+  final String bookingId;
+  final bool accept;
+  @override
+  List<Object?> get props => [bookingId, accept];
+}
+
 sealed class MyBookingsState extends Equatable {
   const MyBookingsState();
   @override
@@ -51,6 +60,7 @@ class MyBookingsBloc extends Bloc<MyBookingsEvent, MyBookingsState> {
   MyBookingsBloc(this._repo) : super(const MyBookingsLoading()) {
     on<MyBookingsRequested>(_onRequested);
     on<BookingCancelPressed>(_onCancel);
+    on<BookingCounterResponded>(_onCounterResponded);
   }
 
   final BookingsRepository _repo;
@@ -87,6 +97,20 @@ class MyBookingsBloc extends Bloc<MyBookingsEvent, MyBookingsState> {
               : b)
           .toList();
       emit(MyBookingsLoaded(updated));
+    } on ApiException {
+      emit(MyBookingsLoaded(current.bookings));
+    }
+  }
+
+  Future<void> _onCounterResponded(
+      BookingCounterResponded event, Emitter<MyBookingsState> emit) async {
+    final current = state;
+    if (current is! MyBookingsLoaded) return;
+    emit(MyBookingsLoaded(current.bookings, cancelling: {...current.cancelling, event.bookingId}));
+    try {
+      await _repo.respondToCounter(event.bookingId, event.accept);
+      final page = await _repo.mine(); // refresh statuses (confirmed/cancelled)
+      emit(MyBookingsLoaded(page.items));
     } on ApiException {
       emit(MyBookingsLoaded(current.bookings));
     }

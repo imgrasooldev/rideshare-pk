@@ -10,6 +10,7 @@ import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/bookings/bloc/booking_action_cubit.dart';
 import 'features/bookings/bloc/my_bookings_bloc.dart';
+import 'features/bookings/bloc/requests_cubit.dart';
 import 'features/bookings/data/bookings_repository.dart';
 import 'features/categories/bloc/categories_cubit.dart';
 import 'features/categories/data/categories_repository.dart';
@@ -92,6 +93,7 @@ void main() {
               create: (context) => MessagesUnreadCubit(context.read<MessagesRepository>())),
           BlocProvider(create: (context) => MyBookingsBloc(context.read<BookingsRepository>())),
           BlocProvider(create: (context) => BookingActionCubit(context.read<BookingsRepository>())),
+          BlocProvider(create: (context) => RequestsCubit(context.read<BookingsRepository>())),
           BlocProvider(create: (context) => MyRidesCubit(context.read<RidesRepository>())),
           BlocProvider(create: (context) => PostRideCubit(context.read<RidesRepository>())),
           BlocProvider(create: (context) => ProfileCubit(context.read<AuthRepository>())),

@@ -37,7 +37,9 @@ describe("RatingsService", () => {
       city: "lahore"
     });
     rideId = ride.id;
-    await bookings.create(riderId, rideId, 1, "key-1");
+    // A rating requires a CONFIRMED booking, so accept the request.
+    const bk = await bookings.create(riderId, rideId, 1, "key-1");
+    await bookings.accept(bk.id, driverId);
   });
 
   it("booked rider rates the driver; aggregate updates", async () => {
@@ -66,7 +68,8 @@ describe("RatingsService", () => {
       ladiesOnly: false,
       city: "lahore"
     });
-    await bookings.create(riderId, ride2.id, 1, "key-2");
+    const bk2 = await bookings.create(riderId, ride2.id, 1, "key-2");
+    await bookings.accept(bk2.id, driverId);
     await service.rate(driverId, ride2.id, riderId, 5);
     expect(ratingsRepo.aggregates.get(riderId)).toEqual({ avg: 4.5, count: 2 });
   });

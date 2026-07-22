@@ -3,6 +3,7 @@ import 'package:rideshare_mobile/features/auth/data/auth_repository.dart';
 import 'package:rideshare_mobile/features/auth/data/models/user.dart';
 import 'package:rideshare_mobile/features/bookings/data/bookings_repository.dart';
 import 'package:rideshare_mobile/features/bookings/data/models/booking.dart';
+import 'package:rideshare_mobile/features/bookings/data/models/seat_request.dart';
 import 'package:rideshare_mobile/features/categories/data/categories_repository.dart';
 import 'package:rideshare_mobile/features/earnings/data/earnings_repository.dart';
 import 'package:rideshare_mobile/features/messages/data/messages_repository.dart';
@@ -323,7 +324,7 @@ class FakeBookingsRepository implements BookingsRepository {
       id: 'b${bookings.length + 1}',
       rideId: rideId,
       seats: seats,
-      status: 'confirmed',
+      status: 'requested',
       createdAt: DateTime.now(),
       originLabel: 'DHA Phase 5',
       destLabel: 'Gulberg (Liberty Market)',
@@ -333,6 +334,37 @@ class FakeBookingsRepository implements BookingsRepository {
     bookings.add(booking);
     return booking;
   }
+
+  @override
+  Future<Booking> respondToCounter(String bookingId, bool accept) async {
+    final i = bookings.indexWhere((b) => b.id == bookingId);
+    final b = bookings[i];
+    final updated = Booking(
+      id: b.id,
+      rideId: b.rideId,
+      seats: b.seats,
+      status: accept ? 'confirmed' : 'cancelled',
+      createdAt: b.createdAt,
+      originLabel: b.originLabel,
+      destLabel: b.destLabel,
+      departAt: b.departAt,
+      pricePerSeat: b.pricePerSeat,
+    );
+    bookings[i] = updated;
+    return updated;
+  }
+
+  @override
+  Future<List<SeatRequest>> requests() async => const [];
+
+  @override
+  Future<void> accept(String bookingId) async {}
+
+  @override
+  Future<void> reject(String bookingId) async {}
+
+  @override
+  Future<void> counter(String bookingId, int offeredPrice) async {}
 
   @override
   Future<Booking> cancel(String bookingId) async {

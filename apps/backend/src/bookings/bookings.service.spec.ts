@@ -50,30 +50,40 @@ describe("BookingsService", () => {
     ride = await makeRide();
   });
 
-  it("books a seat, decrements availability, marks full at zero", async () => {
+  it("request holds no seat; driver accept confirms and decrements to full", async () => {
     const b = await service.book(riderId, ride.id, 2, "key-1");
-    expect(b.status).toBe("confirmed");
+    expect(b.status).toBe("requested");
+    // A pending request never blocks the ride.
+    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(3);
+
+    const accepted = await service.respond(driverId, b.id, "accept");
+    expect(accepted.status).toBe("confirmed");
     expect((await rides.findById(ride.id))!.seatsAvailable).toBe(1);
 
-    await service.book(riderId, ride.id, 1, "key-2");
+    const b2 = await service.book(riderId, ride.id, 1, "key-2");
+    await service.respond(driverId, b2.id, "accept");
     const after = await rides.findById(ride.id);
     expect(after!.seatsAvailable).toBe(0);
     expect(after!.status).toBe("full");
   });
 
-  it("idempotency: same key replays the original booking, no double decrement", async () => {
+  it("idempotency: same key replays the original request", async () => {
     const first = await service.book(riderId, ride.id, 1, "same-key");
     const replay = await service.book(riderId, ride.id, 1, "same-key");
     expect(replay.id).toBe(first.id);
-    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
+    expect(first.status).toBe("requested");
+    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(3);
   });
 
-  it("race: N concurrent bookings for limited seats - exactly seats_total win", async () => {
+  it("race: N concurrent accepts for limited seats - exactly seats_total win", async () => {
     const riders = await Promise.all(
       Array.from({ length: 6 }, (_, i) => users.upsertByPhone(`+9230099900${i}${i}`, "lahore"))
     );
-    const results = await Promise.allSettled(
+    const requests = await Promise.all(
       riders.map((r, i) => service.book(r.id, ride.id, 1, `race-${i}`))
+    );
+    const results = await Promise.allSettled(
+      requests.map((b) => service.respond(driverId, b.id, "accept"))
     );
     const won = results.filter((r) => r.status === "fulfilled").length;
     const lost = results.filter((r) => r.status === "rejected").length;
@@ -84,15 +94,33 @@ describe("BookingsService", () => {
     expect(after!.status).toBe("full");
   });
 
-  it("rejects own-ride booking, departed rides, and overbooking", async () => {
+  it("rejects own-ride requests, departed rides, and unknown rides", async () => {
     await expect(service.book(driverId, ride.id, 1, "k")).rejects.toThrow(/own ride/);
-    await expect(service.book(riderId, ride.id, 4, "k2")).rejects.toThrow(/Not enough seats/);
     const past = await makeRide({ departAt: new Date(Date.now() - 3600_000).toISOString() });
     await expect(service.book(riderId, past.id, 1, "k3")).rejects.toThrow(/already departed/);
     await expect(service.book(riderId, "nope", 1, "k4")).rejects.toThrow(/Ride not found/);
+    // Over-capacity is allowed as a request but fails on accept.
+    const over = await service.book(riderId, ride.id, 4, "k2");
+    await expect(service.respond(driverId, over.id, "accept")).rejects.toThrow(/Not enough seats/);
   });
 
-  it("ladies-only rides are bookable only by women", async () => {
+  it("driver can reject; rider can accept a counter-offer at the new price", async () => {
+    const r1 = await service.book(riderId, ride.id, 1, "r-1");
+    const rejected = await service.respond(driverId, r1.id, "reject");
+    expect(rejected.status).toBe("rejected");
+    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(3);
+
+    const r2 = await service.book(riderId, ride.id, 1, "r-2");
+    const countered = await service.respond(driverId, r2.id, "counter", 400);
+    expect(countered.status).toBe("countered");
+    expect(countered.offeredPrice).toBe(400);
+
+    const confirmed = await service.respondToCounter(riderId, r2.id, true);
+    expect(confirmed.status).toBe("confirmed");
+    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
+  });
+
+  it("ladies-only rides are requestable only by women", async () => {
     const lo = await makeRide({ ladiesOnly: true });
     await expect(service.book(riderId, lo.id, 1, "k5")).rejects.toThrow(/ladies-only/);
     const woman = await users.upsertByPhone("+923003333333", "lahore");
@@ -100,8 +128,9 @@ describe("BookingsService", () => {
     await expect(service.book(woman.id, lo.id, 1, "k6")).resolves.toBeTruthy();
   });
 
-  it("cancel restores seats, reopens a full ride, and is single-shot", async () => {
+  it("cancel restores seats only for confirmed bookings, and is single-shot", async () => {
     const b1 = await service.book(riderId, ride.id, 3, "k7");
+    await service.respond(driverId, b1.id, "accept");
     expect((await rides.findById(ride.id))!.status).toBe("full");
 
     await service.cancel(b1.id, riderId);
@@ -110,6 +139,12 @@ describe("BookingsService", () => {
     expect(after!.status).toBe("open");
 
     await expect(service.cancel(b1.id, riderId)).rejects.toThrow(/already finished/);
+
+    // Cancelling a still-pending request frees nothing (it held no seat).
+    const pending = await service.book(riderId, ride.id, 2, "k7b");
+    await service.cancel(pending.id, riderId);
+    expect((await rides.findById(ride.id))!.seatsAvailable).toBe(3);
+
     // Someone else's booking cannot be cancelled.
     const b2 = await service.book(riderId, ride.id, 1, "k8");
     await expect(service.cancel(b2.id, driverId)).rejects.toThrow(/not yours|not found/i);

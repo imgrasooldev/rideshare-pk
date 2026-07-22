@@ -38,7 +38,7 @@ export class WalletService {
   async summary(driverId: string): Promise<WalletSummary> {
     if (!this.pool) return this.empty();
     const fares = await this.pool.query(
-      `SELECT COALESCE(SUM(b.seats * r.price_per_seat), 0)::int AS gross
+      `SELECT COALESCE(SUM(b.seats * COALESCE(b.offered_price, r.price_per_seat)), 0)::int AS gross
        FROM bookings b JOIN rides r ON r.id = b.ride_id
        WHERE r.driver_id = $1 AND b.status IN ('confirmed', 'completed')`,
       [driverId]

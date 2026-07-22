@@ -32,9 +32,9 @@ export class EarningsService {
 
     const fares = await this.pool.query(
       `SELECT
-         COALESCE(SUM(b.seats * r.price_per_seat) FILTER (WHERE r.depart_at::date = current_date), 0)::int AS today,
-         COALESCE(SUM(b.seats * r.price_per_seat) FILTER (WHERE r.depart_at >= date_trunc('month', now())), 0)::int AS month,
-         COALESCE(SUM(b.seats * r.price_per_seat), 0)::int AS all_time,
+         COALESCE(SUM(b.seats * COALESCE(b.offered_price, r.price_per_seat)) FILTER (WHERE r.depart_at::date = current_date), 0)::int AS today,
+         COALESCE(SUM(b.seats * COALESCE(b.offered_price, r.price_per_seat)) FILTER (WHERE r.depart_at >= date_trunc('month', now())), 0)::int AS month,
+         COALESCE(SUM(b.seats * COALESCE(b.offered_price, r.price_per_seat)), 0)::int AS all_time,
          COUNT(*) FILTER (WHERE r.depart_at >= date_trunc('month', now()))::int AS trips_month
        FROM bookings b JOIN rides r ON r.id = b.ride_id
        WHERE r.driver_id = $1 AND b.status IN ('confirmed', 'completed')`,
