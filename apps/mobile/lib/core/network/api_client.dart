@@ -47,6 +47,9 @@ class ApiClient {
   Future<Map<String, dynamic>> patch(String path, {Object? body}) =>
       _request(() => _dio.patch<Map<String, dynamic>>(path, data: body));
 
+  Future<Map<String, dynamic>> delete(String path) =>
+      _request(() => _dio.delete<Map<String, dynamic>>(path));
+
   /// Uploads raw bytes to an absolute, pre-signed URL (e.g. Supabase Storage).
   /// Deliberately unauthenticated: the URL carries its own short-lived token,
   /// and our bearer token must never be sent to a third-party host.

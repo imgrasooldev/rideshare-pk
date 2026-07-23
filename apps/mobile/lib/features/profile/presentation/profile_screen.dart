@@ -8,6 +8,7 @@ import '../../rides/data/rides_repository.dart'
     show vehicleTypeIcon, vehicleTypeLabel, vehicleTypes;
 import '../../../l10n/app_localizations.dart';
 import '../../referrals/presentation/referral_screen.dart';
+import '../../safety/presentation/blocked_users_screen.dart';
 import '../../settings/locale_cubit.dart';
 import '../../trust/bloc/verifications_cubit.dart';
 import '../../vehicles/bloc/vehicles_cubit.dart';
@@ -154,6 +155,18 @@ class ProfileScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const ReferralScreen()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(Icons.shield_outlined, color: theme.colorScheme.primary),
+              title: const Text('Blocked people'),
+              subtitle: const Text("Anyone you've blocked from matching with you"),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const BlockedUsersScreen()),
               ),
             ),
           ),

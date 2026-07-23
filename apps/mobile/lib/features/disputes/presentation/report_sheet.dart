@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../safety/data/blocks_repository.dart';
 import '../data/disputes_repository.dart';
 
 const _categories = [
@@ -12,29 +13,57 @@ const _categories = [
   'Other',
 ];
 
-/// Opens the "Report a problem" sheet; files a dispute against [bookingId].
-Future<void> showReportSheet(BuildContext context, {String? bookingId}) async {
+/// Opens the "Report a problem" sheet.
+///
+/// Pass [reportedUserId] when the complaint is about a PERSON — the sheet then
+/// also offers to block them, which is what a user actually wants in the
+/// moment they feel unsafe.
+Future<void> showReportSheet(
+  BuildContext context, {
+  String? bookingId,
+  String? reportedUserId,
+  String? reportedName,
+}) async {
   final repo = context.read<DisputesRepository>();
+  final blocks = context.read<BlocksRepository>();
   final messenger = ScaffoldMessenger.of(context);
-  final filed = await showModalBottomSheet<bool>(
+  final blocked = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: _ReportForm(repo: repo, bookingId: bookingId),
+      child: _ReportForm(
+        repo: repo,
+        blocks: blocks,
+        bookingId: bookingId,
+        reportedUserId: reportedUserId,
+        reportedName: reportedName,
+      ),
     ),
   );
-  if (filed == true) {
-    messenger.showSnackBar(const SnackBar(
-        content: Text('Report submitted — our team will look into it.')));
-  }
+  if (blocked == null) return; // dismissed without filing
+  messenger.showSnackBar(SnackBar(
+    content: Text(blocked
+        ? 'Report submitted and ${reportedName ?? 'this person'} blocked.'
+        : 'Report submitted — our team will look into it.'),
+  ));
 }
 
 class _ReportForm extends StatefulWidget {
-  const _ReportForm({required this.repo, this.bookingId});
+  const _ReportForm({
+    required this.repo,
+    required this.blocks,
+    this.bookingId,
+    this.reportedUserId,
+    this.reportedName,
+  });
+
   final DisputesRepository repo;
+  final BlocksRepository blocks;
   final String? bookingId;
+  final String? reportedUserId;
+  final String? reportedName;
 
   @override
   State<_ReportForm> createState() => _ReportFormState();
@@ -44,6 +73,7 @@ class _ReportFormState extends State<_ReportForm> {
   String _category = _categories.first;
   final _message = TextEditingController();
   bool _busy = false;
+  bool _alsoBlock = false;
   String? _error;
 
   @override
@@ -62,9 +92,24 @@ class _ReportFormState extends State<_ReportForm> {
       _error = null;
     });
     try {
-      await widget.repo
-          .file(category: _category, message: _message.text.trim(), bookingId: widget.bookingId);
-      if (mounted) Navigator.of(context).pop(true);
+      await widget.repo.file(
+        category: _category,
+        message: _message.text.trim(),
+        bookingId: widget.bookingId,
+        reportedUserId: widget.reportedUserId,
+      );
+      // The block is secondary: if it fails, the report still stands, so it
+      // must not turn a filed report into an error the user sees.
+      var blocked = false;
+      if (_alsoBlock && widget.reportedUserId != null) {
+        try {
+          await widget.blocks.block(widget.reportedUserId!, reason: _category);
+          blocked = true;
+        } catch (_) {
+          /* reported successfully; blocking can be retried from Profile */
+        }
+      }
+      if (mounted) Navigator.of(context).pop(blocked);
     } catch (_) {
       setState(() {
         _busy = false;
@@ -102,6 +147,18 @@ class _ReportFormState extends State<_ReportForm> {
               border: OutlineInputBorder(),
             ),
           ),
+          if (widget.reportedUserId != null) ...[
+            const SizedBox(height: 4),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _alsoBlock,
+              onChanged: _busy ? null : (v) => setState(() => _alsoBlock = v),
+              title: Text('Also block ${widget.reportedName ?? 'this person'}'),
+              subtitle: const Text(
+                "You won't be shown to each other again, and neither of you can book the other.",
+              ),
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
