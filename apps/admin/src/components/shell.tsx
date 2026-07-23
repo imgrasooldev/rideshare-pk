@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BadgeDollarSign,
+  // BadgeDollarSign, // PARKED (money feature: Revenue cockpit)
   Car,
   Flag,
   LayoutDashboard,
@@ -17,7 +17,9 @@ import { ThemeToggle } from "@/components/theme";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/revenue/", label: "Revenue", icon: BadgeDollarSign },
+  // PARKED — Revenue/commission cockpit. Platform handles no money in MVP;
+  // re-enable when payment gateways are live. Page + API remain in the codebase.
+  // { href: "/revenue/", label: "Revenue", icon: BadgeDollarSign },
   { href: "/verifications/", label: "Verifications", icon: ShieldCheck },
   { href: "/safety/", label: "Safety", icon: Flag },
   { href: "/rides/", label: "Rides", icon: Car },

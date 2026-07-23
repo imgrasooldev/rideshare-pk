@@ -9,7 +9,7 @@ import '../../auth/data/auth_repository.dart';
 import '../../auth/data/models/user.dart';
 import '../../bookings/presentation/requests_screen.dart';
 import '../../earnings/bloc/earnings_cubit.dart';
-import '../../wallet/presentation/wallet_screen.dart';
+// PARKED (money feature): import '../../wallet/presentation/wallet_screen.dart';
 import '../bloc/my_rides_cubit.dart';
 import 'post_ride_screen.dart';
 
@@ -311,10 +311,13 @@ class _QuickActions extends StatelessWidget {
         .showSnackBar(SnackBar(content: Text('$name is coming soon')));
   }
 
-  void _openWallet(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const WalletScreen()));
-  }
+  // PARKED — commission settlement wallet. Platform takes no commission in MVP
+  // (fares are settled directly between rider and driver). Re-enable when
+  // payment gateways are live. See WalletScreen.
+  // void _openWallet(BuildContext context) {
+  //   Navigator.of(context)
+  //       .push(MaterialPageRoute<void>(builder: (_) => const WalletScreen()));
+  // }
 
   void _openRequests(BuildContext context) {
     Navigator.of(context)
@@ -340,8 +343,9 @@ class _QuickActions extends StatelessWidget {
           const Color(0xFFEDE9FD), onOpenRides),
       _Action('Vehicles', Icons.directions_car_rounded, const Color(0xFF12A46B),
           const Color(0xFFDFF6EC), onOpenProfile),
-      _Action('Wallet', Icons.account_balance_wallet_rounded, const Color(0xFFE19700),
-          const Color(0xFFFFF3D6), () => _openWallet(context)),
+      // PARKED (money feature): commission wallet action — re-enable with gateways.
+      // _Action('Wallet', Icons.account_balance_wallet_rounded, const Color(0xFFE19700),
+      //     const Color(0xFFFFF3D6), () => _openWallet(context)),
       _Action('Support', Icons.headset_mic_rounded, const Color(0xFF0FA898),
           const Color(0xFFD9F5F0), () => _soon(context, 'Support')),
     ];
