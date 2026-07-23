@@ -7,7 +7,14 @@ import {
 } from "@nestjs/common";
 import type { AppConfig } from "../config/config.js";
 import { PlacesRepository } from "../places/places.repo.js";
-import { APP_CONFIG, RIDE_REPOSITORY, USER_REPOSITORY, VEHICLE_REPOSITORY } from "../shared/tokens.js";
+import type { BlocksRepository } from "../safety/blocks.repo.js";
+import {
+  APP_CONFIG,
+  BLOCKS_REPOSITORY,
+  RIDE_REPOSITORY,
+  USER_REPOSITORY,
+  VEHICLE_REPOSITORY
+} from "../shared/tokens.js";
 import type { UserRepository } from "../users/users.repo.js";
 import type { VehicleRepository } from "../vehicles/vehicles.repo.js";
 import type { NewRide, RidePage, RideRecord, RideRepository, RideSearch } from "./rides.repo.js";
@@ -21,6 +28,7 @@ export class RidesService {
     @Inject(RIDE_REPOSITORY) private readonly rides: RideRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(VEHICLE_REPOSITORY) private readonly vehicles: VehicleRepository,
+    @Inject(BLOCKS_REPOSITORY) private readonly blocks: BlocksRepository,
     private readonly places?: PlacesRepository
   ) {}
 
@@ -28,6 +36,9 @@ export class RidesService {
     const user = await this.users.findById(driverId);
     if (!user) throw new NotFoundException("User not found");
 
+    if (user.suspendedAt) {
+      throw new ForbiddenException("Your account is suspended. Contact support.");
+    }
     if (user.role !== "driver" && user.role !== "both") {
       throw new ForbiddenException("Set your role to driver in your profile first");
     }
@@ -84,8 +95,17 @@ export class RidesService {
     return ride;
   }
 
-  search(params: RideSearch): Promise<RidePage> {
-    return this.rides.search(params);
+  /**
+   * Blocked people must never surface in each other's results, so the block
+   * list is resolved here and applied inside the query (not post-filtered,
+   * which would silently shrink pages).
+   */
+  async search(params: RideSearch, viewerId?: string): Promise<RidePage> {
+    if (!viewerId || !this.blocks) return this.rides.search(params);
+    const hidden = await this.blocks.blockedIdsFor(viewerId);
+    return this.rides.search(
+      hidden.length ? { ...params, excludeDriverIds: hidden } : params
+    );
   }
 
   myRides(driverId: string, cursor: string | null, limit: number): Promise<RidePage> {

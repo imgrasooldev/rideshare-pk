@@ -1,5 +1,6 @@
 ﻿import { beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../config/config.js";
+import { InMemoryBlocksRepository } from "../safety/blocks.repo.js";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryVehicleRepository } from "../vehicles/vehicles.repo.js";
 import { InMemoryRideRepository } from "./rides.repo.js";
@@ -27,13 +28,17 @@ const baseRide: PostRideInput = {
 describe("RidesService", () => {
   let users: InMemoryUserRepository;
   let vehicles: InMemoryVehicleRepository;
+  let rides: InMemoryRideRepository;
+  let blocks: InMemoryBlocksRepository;
   let service: RidesService;
   let driverId: string;
 
   beforeEach(async () => {
     users = new InMemoryUserRepository();
     vehicles = new InMemoryVehicleRepository();
-    service = new RidesService(loadConfig({}), new InMemoryRideRepository(), users, vehicles);
+    rides = new InMemoryRideRepository();
+    blocks = new InMemoryBlocksRepository();
+    service = new RidesService(loadConfig({}), rides, users, vehicles, blocks);
     const driver = await users.upsertByPhone("+923001111111", "lahore");
     driverId = driver.id;
     await users.updateProfile(driverId, { role: "driver", gender: "female" });
@@ -64,12 +69,7 @@ describe("RidesService", () => {
   });
 
   it("allows unverified drivers when the gate is configured off", async () => {
-    const open = new RidesService(
-      loadConfig({ REQUIRE_DRIVER_VERIFICATION_TO_POST: "false" }),
-      new InMemoryRideRepository(),
-      users,
-      vehicles
-    );
+    const open = new RidesService(loadConfig({ REQUIRE_DRIVER_VERIFICATION_TO_POST: "false" }), new InMemoryRideRepository(), users, vehicles, blocks);
     await users.setVerified(driverId, false);
     await expect(open.post(driverId, baseRide)).resolves.toBeTruthy();
   });
@@ -191,6 +191,31 @@ describe("RidesService", () => {
         dropLng: 74.4082
       });
       expect(offCorridor.items).toHaveLength(0);
+    });
+
+    it("hides a blocked driver's rides from the blocker, and vice versa", async () => {
+      const ride = await service.post(driverId, baseRide);
+      const rider = await users.upsertByPhone("+923004444444", "lahore");
+
+      // Visible before any block.
+      const before = await service.search(nearGulbergToDha, rider.id);
+      expect(before.items.map((r) => r.id)).toContain(ride.id);
+
+      // Rider blocks the driver → gone.
+      await blocks.block(rider.id, driverId, "made me uncomfortable");
+      const after = await service.search(nearGulbergToDha, rider.id);
+      expect(after.items.map((r) => r.id)).not.toContain(ride.id);
+
+      // Enforced symmetrically: the driver blocking the rider hides it too.
+      await blocks.unblock(rider.id, driverId);
+      await blocks.block(driverId, rider.id, null);
+      const reverse = await service.search(nearGulbergToDha, rider.id);
+      expect(reverse.items.map((r) => r.id)).not.toContain(ride.id);
+
+      // Everyone else still sees the ride.
+      const other = await users.upsertByPhone("+923005555555", "lahore");
+      const unaffected = await service.search(nearGulbergToDha, other.id);
+      expect(unaffected.items.map((r) => r.id)).toContain(ride.id);
     });
 
     it("filters by vehicle type", async () => {

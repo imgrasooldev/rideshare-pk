@@ -75,6 +75,8 @@ export interface RideSearch {
    * Set false to restrict to endpoint matches only.
    */
   alongRoute?: boolean;
+  /** Driver ids to hide (mutual blocks) — safety, applied before paging. */
+  excludeDriverIds?: string[];
   cursor: string | null;
   limit: number;
 }
@@ -217,6 +219,10 @@ export class PgRideRepository implements RideRepository {
     if (p.ladiesOnly !== undefined) {
       params.push(p.ladiesOnly);
       sql += ` AND r.ladies_only = $${params.length}`;
+    }
+    if (p.excludeDriverIds?.length) {
+      params.push(p.excludeDriverIds);
+      sql += ` AND r.driver_id <> ALL($${params.length}::uuid[])`;
     }
     if (p.vehicleType) {
       params.push(p.vehicleType);
@@ -389,6 +395,7 @@ export class InMemoryRideRepository implements RideRepository {
           r.departAt >= p.departAfter &&
           r.departAt <= p.departBefore &&
           matchesGeo(r, p) &&
+          !(p.excludeDriverIds ?? []).includes(r.driverId) &&
           (p.ladiesOnly === undefined || r.ladiesOnly === p.ladiesOnly) &&
           (!p.vehicleType || r.vehicleType === p.vehicleType) &&
           (!p.vertical || r.vertical === p.vertical) &&

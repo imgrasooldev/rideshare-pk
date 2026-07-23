@@ -4,6 +4,7 @@ import { NotificationsService } from "../notifications/notifications.service.js"
 import { PushService } from "../push/push.service.js";
 import type { AppConfig } from "../config/config.js";
 import { InMemoryRideRepository, type RideRecord } from "../rides/rides.repo.js";
+import { InMemoryBlocksRepository } from "../safety/blocks.repo.js";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryBookingRepository } from "./bookings.repo.js";
 import { BookingsService } from "./bookings.service.js";
@@ -11,6 +12,7 @@ import { BookingsService } from "./bookings.service.js";
 describe("BookingsService", () => {
   let users: InMemoryUserRepository;
   let rides: InMemoryRideRepository;
+  let blocks: InMemoryBlocksRepository;
   let service: BookingsService;
   let driverId: string;
   let riderId: string;
@@ -41,10 +43,12 @@ describe("BookingsService", () => {
   beforeEach(async () => {
     users = new InMemoryUserRepository();
     rides = new InMemoryRideRepository();
+    blocks = new InMemoryBlocksRepository();
     service = new BookingsService(
       new InMemoryBookingRepository(rides),
       rides,
       users,
+      blocks,
       new NotificationsService(
         new InMemoryNotificationRepository(),
         new PushService(null, { FIREBASE_SERVICE_ACCOUNT: "", FIREBASE_PROJECT_ID: "" } as AppConfig)
@@ -123,6 +127,20 @@ describe("BookingsService", () => {
     const confirmed = await service.respondToCounter(riderId, r2.id, true);
     expect(confirmed.status).toBe("confirmed");
     expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
+  });
+
+  it("refuses a booking when either party has blocked the other", async () => {
+    await blocks.block(riderId, driverId, "unsafe driving");
+    await expect(service.book(riderId, ride.id, 1, "blk1")).rejects.toThrow(/not available to you/);
+
+    // Symmetric: the driver blocking the rider also prevents the request.
+    await blocks.unblock(riderId, driverId);
+    await blocks.block(driverId, riderId, null);
+    await expect(service.book(riderId, ride.id, 1, "blk2")).rejects.toThrow(/not available to you/);
+
+    // And once unblocked, booking works again.
+    await blocks.unblock(driverId, riderId);
+    await expect(service.book(riderId, ride.id, 1, "blk3")).resolves.toBeTruthy();
   });
 
   describe("trip start PIN", () => {

@@ -15,6 +15,7 @@ export const IDENTITY_REPOSITORY = Symbol("IDENTITY_REPOSITORY");
 export const OAUTH_VERIFIER = Symbol("OAUTH_VERIFIER");
 export const ADMIN_INSIGHTS = Symbol("ADMIN_INSIGHTS");
 export const DOCUMENT_STORAGE = Symbol("DOCUMENT_STORAGE");
+export const BLOCKS_REPOSITORY = Symbol("BLOCKS_REPOSITORY");
 export const SMS_SENDER = Symbol("SMS_SENDER");
 export const PG_POOL = Symbol("PG_POOL");
 export const NOTIFICATION_REPOSITORY = Symbol("NOTIFICATION_REPOSITORY");

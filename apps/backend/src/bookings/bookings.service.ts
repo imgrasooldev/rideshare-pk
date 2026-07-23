@@ -5,7 +5,13 @@ import {
   Injectable,
   NotFoundException
 } from "@nestjs/common";
-import { BOOKING_REPOSITORY, RIDE_REPOSITORY, USER_REPOSITORY } from "../shared/tokens.js";
+import type { BlocksRepository } from "../safety/blocks.repo.js";
+import {
+  BLOCKS_REPOSITORY,
+  BOOKING_REPOSITORY,
+  RIDE_REPOSITORY,
+  USER_REPOSITORY
+} from "../shared/tokens.js";
 import type { RideRepository } from "../rides/rides.repo.js";
 import type { UserRepository } from "../users/users.repo.js";
 import { NotificationsService } from "../notifications/notifications.service.js";
@@ -24,6 +30,7 @@ export class BookingsService {
     @Inject(BOOKING_REPOSITORY) private readonly bookings: BookingRepository,
     @Inject(RIDE_REPOSITORY) private readonly rides: RideRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    @Inject(BLOCKS_REPOSITORY) private readonly blocks: BlocksRepository,
     private readonly notifications: NotificationsService
   ) {}
 
@@ -35,6 +42,10 @@ export class BookingsService {
     }
     if (new Date(ride.departAt).getTime() <= Date.now()) {
       throw new BadRequestException("This ride has already departed");
+    }
+    // Deliberately vague: revealing "they blocked you" invites retaliation.
+    if (await this.blocks.isBlockedEitherWay(riderId, ride.driverId)) {
+      throw new ForbiddenException("This ride is not available to you");
     }
     if (ride.ladiesOnly) {
       const rider = await this.users.findById(riderId);

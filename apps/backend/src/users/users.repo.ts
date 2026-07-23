@@ -15,6 +15,8 @@ export interface UserRecord {
   /** Encrypted at rest (AES-GCM) — never expose raw; mask via UsersService. */
   cnic: string | null;
   verified: boolean;
+  /** Set when an admin suspended the account; blocks sign-in and actions. */
+  suspendedAt?: string | null;
   isAdmin: boolean;
   city: string;
   ratingAvg: number;
@@ -57,7 +59,8 @@ export interface UserRepository {
 const COLS = `id, phone, email, email_verified AS "emailVerified", password_hash AS "passwordHash",
   name, role, gender, cnic, verified, is_admin AS "isAdmin", city,
   rating_avg::float8 AS "ratingAvg", rating_count AS "ratingCount",
-  emergency_phone AS "emergencyPhone", is_online AS "isOnline"`;
+  emergency_phone AS "emergencyPhone", is_online AS "isOnline",
+  suspended_at AS "suspendedAt"`;
 
 export class PgUserRepository implements UserRepository {
   constructor(private readonly pool: Pool) {}

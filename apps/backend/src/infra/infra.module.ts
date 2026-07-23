@@ -12,10 +12,12 @@ import { InMemoryBookingRepository, PgBookingRepository } from "../bookings/book
 import { InMemoryRatingRepository, PgRatingRepository } from "../ratings/ratings.repo.js";
 import { InMemoryRideRepository, PgRideRepository } from "../rides/rides.repo.js";
 import { InMemoryBus, RedisBus } from "../shared/bus.js";
+import { InMemoryBlocksRepository, PgBlocksRepository } from "../safety/blocks.repo.js";
 import { createDocumentStorage } from "../storage/storage.provider.js";
 import {
   ADMIN_INSIGHTS,
   APP_CONFIG,
+  BLOCKS_REPOSITORY,
   DOCUMENT_STORAGE,
   BOOKING_REPOSITORY,
   BUS,
@@ -159,6 +161,12 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
       useFactory: (config: AppConfig) => createDocumentStorage(config)
     },
     {
+      provide: BLOCKS_REPOSITORY,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool | null) =>
+        pool ? new PgBlocksRepository(pool) : new InMemoryBlocksRepository()
+    },
+    {
       provide: BUS,
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) => {
@@ -172,7 +180,8 @@ import { InMemoryVehicleRepository, PgVehicleRepository } from "../vehicles/vehi
     APP_CONFIG, KV_STORE, PG_POOL, BUS, IDENTITY_REPOSITORY, ADMIN_INSIGHTS,
     USER_REPOSITORY, VEHICLE_REPOSITORY, VERIFICATION_REPOSITORY, RIDE_REPOSITORY,
     BOOKING_REPOSITORY, TRIP_REPOSITORY, RATING_REPOSITORY, SAFETY_REPOSITORY,
-    NOTIFICATION_REPOSITORY, SUBSCRIPTION_REPOSITORY, MESSAGE_REPOSITORY, DOCUMENT_STORAGE
+    NOTIFICATION_REPOSITORY, SUBSCRIPTION_REPOSITORY, MESSAGE_REPOSITORY, DOCUMENT_STORAGE,
+    BLOCKS_REPOSITORY
   ]
 })
 export class InfraModule {}

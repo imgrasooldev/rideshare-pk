@@ -65,7 +65,7 @@ export class RidesController {
 
   @Get("search")
   @UseGuards(JwtAuthGuard)
-  search(@Query() query: unknown) {
+  search(@Req() req: AuthedRequest, @Query() query: unknown) {
     const dto = parse(searchDto, query);
     return this.rides.search({
       pickupLat: dto.pickupLat,
@@ -82,7 +82,7 @@ export class RidesController {
       city: dto.city,
       cursor: dto.cursor ?? null,
       limit: dto.limit
-    });
+    }, req.user.sub);
   }
 
   @Get("mine")
