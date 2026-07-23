@@ -6,7 +6,15 @@ import {
 } from "@nestjs/common";
 import type { MessageBus } from "../shared/bus.js";
 import type { KeyValueStore } from "../shared/kv.js";
-import { BUS, KV_STORE, RIDE_REPOSITORY, TRIP_REPOSITORY } from "../shared/tokens.js";
+import {
+  BOOKING_REPOSITORY,
+  BUS,
+  KV_STORE,
+  RIDE_REPOSITORY,
+  TRIP_REPOSITORY
+} from "../shared/tokens.js";
+import type { BookingRepository } from "../bookings/bookings.repo.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
 import type { RideRepository } from "../rides/rides.repo.js";
 import type { TripRecord, TripRepository } from "./trips.repo.js";
 
@@ -25,7 +33,9 @@ export class TrackingService {
     @Inject(TRIP_REPOSITORY) private readonly trips: TripRepository,
     @Inject(RIDE_REPOSITORY) private readonly rides: RideRepository,
     @Inject(KV_STORE) private readonly kv: KeyValueStore,
-    @Inject(BUS) private readonly bus: MessageBus
+    @Inject(BUS) private readonly bus: MessageBus,
+    @Inject(BOOKING_REPOSITORY) private readonly bookings: BookingRepository,
+    private readonly notifications: NotificationsService
   ) {}
 
   private readonly lastPingAt = new Map<string, number>(); // rideId → epoch ms
@@ -53,6 +63,19 @@ export class TrackingService {
     await this.kv.del(`trip:loc:${rideId}`);
     await this.bus.publish(this.channel(rideId), JSON.stringify({ type: "ended" }));
     this.lastPingAt.delete(rideId);
+
+    // Trip over: settle the bookings and nudge each rider to rate.
+    const ride = await this.rides.findById(rideId);
+    const completed = await this.bookings.completeRide(rideId);
+    for (const b of completed) {
+      void this.notifications.notify(
+        b.riderId,
+        "trip_completed",
+        "How was your trip?",
+        ride ? `Rate your ride · ${ride.originLabel} → ${ride.destLabel}` : "Rate your ride",
+        { rideId, bookingId: b.id }
+      );
+    }
     return trip;
   }
 

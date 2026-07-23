@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../rides/data/rides_repository.dart';
 import '../../rides/presentation/driver_vehicle_sheet.dart';
+import '../../tracking/data/tracking_repository.dart';
 import '../../tracking/presentation/live_trip_screen.dart';
 import '../../disputes/presentation/report_sheet.dart';
 import '../bloc/my_bookings_bloc.dart';
@@ -207,6 +209,27 @@ class _BookingCard extends StatelessWidget {
                   ),
                 ],
               ),
+            ] else if (booking.status == 'completed') ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => _rateDriver(context, booking),
+                      icon: const Icon(Icons.star_rounded, size: 18),
+                      label: const Text('Rate driver'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Receipt',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => ReceiptScreen(booking: booking)),
+                    ),
+                    icon: const Icon(Icons.receipt_long_outlined),
+                  ),
+                ],
+              ),
             ],
             Align(
               alignment: Alignment.centerLeft,
@@ -220,6 +243,97 @@ class _BookingCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Rate the driver of a completed trip. We fetch the ride to learn the
+/// driverId (bookings don't carry it), show a 1–5 star dialog, then POST it.
+/// A 409 (already rated) is swallowed as success by the repository.
+Future<void> _rateDriver(BuildContext context, Booking booking) async {
+  final ridesRepo = context.read<RidesRepository>();
+  final trackingRepo = context.read<TrackingRepository>();
+  final messenger = ScaffoldMessenger.of(context);
+
+  final String driverId;
+  try {
+    final ride = await ridesRepo.getById(booking.rideId);
+    driverId = ride.driverId;
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Could not load ride details. Try again.')),
+    );
+    return;
+  }
+  if (!context.mounted) return;
+
+  var stars = 5;
+  final controller = TextEditingController();
+  final submitted = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (dialogContext, setDialogState) => AlertDialog(
+        title: const Text('Rate your driver'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 1; i <= 5; i++)
+                  IconButton(
+                    onPressed: () => setDialogState(() => stars = i),
+                    icon: Icon(
+                      i <= stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: Colors.amber,
+                      size: 32,
+                    ),
+                  ),
+              ],
+            ),
+            TextField(
+              controller: controller,
+              maxLength: 240,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Add a comment (optional)',
+                counterText: '',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Skip')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Submit')),
+        ],
+      ),
+    ),
+  );
+  final comment = controller.text.trim();
+  controller.dispose();
+  if (submitted != true) return;
+
+  try {
+    await trackingRepo.rate(
+      rideId: booking.rideId,
+      toUserId: driverId,
+      stars: stars,
+      comment: comment.isEmpty ? null : comment,
+    );
+    messenger.showSnackBar(const SnackBar(content: Text('Thanks for the feedback!')));
+  } on ApiException catch (e) {
+    // 409 = already rated; from the rider's perspective that's done.
+    messenger.showSnackBar(SnackBar(
+      content: Text(e.statusCode == 409
+          ? 'You already rated this trip.'
+          : 'Could not submit rating. Try again.'),
+    ));
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Could not submit rating. Try again.')),
     );
   }
 }

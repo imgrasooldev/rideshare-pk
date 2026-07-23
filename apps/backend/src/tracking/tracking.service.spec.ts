@@ -1,4 +1,9 @@
 ﻿import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { InMemoryBookingRepository } from "../bookings/bookings.repo.js";
+import { InMemoryNotificationRepository } from "../notifications/notifications.repo.js";
+import { NotificationsService } from "../notifications/notifications.service.js";
+import { PushService } from "../push/push.service.js";
+import type { AppConfig } from "../config/config.js";
 import { InMemoryRideRepository } from "../rides/rides.repo.js";
 import { InMemoryBus } from "../shared/bus.js";
 import { InMemoryKvStore } from "../shared/kv.js";
@@ -18,7 +23,12 @@ describe("TrackingService", () => {
       new InMemoryTripRepository(),
       rides,
       new InMemoryKvStore(),
-      new InMemoryBus()
+      new InMemoryBus(),
+      new InMemoryBookingRepository(rides),
+      new NotificationsService(
+        new InMemoryNotificationRepository(),
+        new PushService(null, { FIREBASE_SERVICE_ACCOUNT: "", FIREBASE_PROJECT_ID: "" } as AppConfig)
+      )
     );
     const ride = await rides.create({
       driverId,

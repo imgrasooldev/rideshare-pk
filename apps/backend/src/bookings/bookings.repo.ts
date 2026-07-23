@@ -62,6 +62,9 @@ export interface BookingRepository {
   verifyStartPin(bookingId: string, driverId: string, pin: string): Promise<BookingRecord>;
   /** Confirmed passengers on a driver's ride (their manifest). */
   listForRide(rideId: string, driverId: string): Promise<DriverRequest[]>;
+  /** Mark all confirmed bookings on a ride completed (on trip end). Returns
+   *  the affected riders so they can be prompted to rate. */
+  completeRide(rideId: string): Promise<Array<{ id: string; riderId: string }>>;
   /** Driver accepts a request → race-safe seat decrement + confirm. */
   accept(bookingId: string, driverId: string): Promise<BookingRecord>;
   /** Driver rejects a request. */
@@ -406,6 +409,16 @@ export class PgBookingRepository implements BookingRepository {
     }));
   }
 
+  async completeRide(rideId: string): Promise<Array<{ id: string; riderId: string }>> {
+    const { rows } = await this.pool.query<{ id: string; riderId: string }>(
+      `UPDATE bookings SET status = 'completed', updated_at = now()
+       WHERE ride_id = $1 AND status = 'confirmed'
+       RETURNING id, rider_id AS "riderId"`,
+      [rideId]
+    );
+    return rows;
+  }
+
   async hasBookingForRide(riderId: string, rideId: string): Promise<boolean> {
     const { rows } = await this.pool.query(
       `SELECT 1 FROM bookings
@@ -660,6 +673,17 @@ export class InMemoryBookingRepository implements BookingRepository {
       out.push({ ...b, startPin: undefined, ride: b._ride, riderName: null });
     }
     return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async completeRide(rideId: string): Promise<Array<{ id: string; riderId: string }>> {
+    const done: Array<{ id: string; riderId: string }> = [];
+    for (const b of this.items.values()) {
+      if (b.rideId === rideId && b.status === "confirmed") {
+        b.status = "completed";
+        done.push({ id: b.id, riderId: b.riderId });
+      }
+    }
+    return done;
   }
 
   async hasBookingForRide(riderId: string, rideId: string): Promise<boolean> {
