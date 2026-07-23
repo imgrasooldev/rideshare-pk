@@ -9,10 +9,12 @@ import '../../../core/widgets/status_pill.dart';
 import '../../../core/network/api_exception.dart';
 import '../../bookings/bloc/booking_action_cubit.dart';
 import '../../categories/bloc/categories_cubit.dart';
+import '../../disputes/presentation/report_sheet.dart';
 import '../../messages/presentation/chat_screen.dart';
 import '../../places/bloc/places_cubit.dart';
 import '../../places/data/places_repository.dart';
 import '../../places/presentation/place_picker.dart';
+import '../../safety/data/blocks_repository.dart';
 import '../../subscriptions/data/subscriptions_repository.dart';
 import '../bloc/ride_search_bloc.dart';
 import '../data/models/ride.dart';
@@ -440,6 +442,84 @@ class _Meta extends StatelessWidget {
   }
 }
 
+/// Report/block the driver straight from the ride card — the point at which a
+/// rider decides they do not want to travel with this person.
+class _SafetyMenu extends StatelessWidget {
+  const _SafetyMenu({required this.ride});
+  final Ride ride;
+
+  Future<void> _confirmBlock(BuildContext context) async {
+    final blocks = context.read<BlocksRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+    final searchBloc = context.read<RideSearchBloc>();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Block this driver?'),
+        content: const Text(
+          "Their rides will be hidden from you and yours from them, and neither of "
+          'you can book the other. You can undo this in Profile.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Block')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    try {
+      await blocks.block(ride.driverId);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Driver blocked. Their rides are now hidden.')),
+      );
+      // Re-run the same query so the blocked driver's rides disappear at once.
+      final current = searchBloc.state;
+      if (current is RideSearchLoaded) searchBloc.add(current.query);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not block right now — please try again.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 20),
+      tooltip: 'Safety options',
+      onSelected: (value) {
+        if (value == 'report') {
+          showReportSheet(context, reportedUserId: ride.driverId, reportedName: 'this driver');
+        } else {
+          _confirmBlock(context);
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: 'report',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.flag_outlined),
+            title: Text('Report driver'),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'block',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.person_off_outlined),
+            title: Text('Block driver'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _RideCard extends StatelessWidget {
   const _RideCard({required this.ride});
   final Ride ride;
@@ -482,6 +562,7 @@ class _RideCard extends StatelessWidget {
                             ?.copyWith(color: theme.colorScheme.outline)),
                   ],
                 ),
+                _SafetyMenu(ride: ride),
               ],
             ),
             const SizedBox(height: 12),

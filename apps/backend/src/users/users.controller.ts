@@ -9,7 +9,9 @@ const updateMeDto = z.object({
   role: z.enum(["driver", "rider", "both"]).optional(),
   gender: z.enum(["female", "male", "other"]).optional(),
   cnic: z.string().min(13).max(15).optional(),
-  emergencyPhone: z.string().min(10).max(20).optional()
+  emergencyPhone: z.string().min(10).max(20).optional(),
+  // Slug, e.g. "karachi" — checked against the cities table in the service.
+  city: z.string().trim().min(2).max(40).optional()
 });
 
 @Controller("me")

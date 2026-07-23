@@ -1,0 +1,7 @@
+# Copy to key.properties (git-ignored) and fill in real values.
+# See ../RELEASE_SIGNING.md. Without this file the release build falls back to
+# debug signing, which must never be distributed.
+storeFile=/absolute/path/to/rideshare-upload.jks
+storePassword=CHANGE_ME
+keyAlias=upload
+keyPassword=CHANGE_ME

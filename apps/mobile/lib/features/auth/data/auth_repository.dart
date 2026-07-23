@@ -89,13 +89,19 @@ class AuthRepository {
   }
 
   Future<User> updateProfile(
-      {String? name, String? role, String? gender, String? cnic, String? emergencyPhone}) async {
+      {String? name,
+      String? role,
+      String? gender,
+      String? cnic,
+      String? emergencyPhone,
+      String? city}) async {
     final res = await _api.patch('/me', body: {
       'name': ?name,
       'role': ?role,
       'gender': ?gender,
       'cnic': ?cnic,
       'emergencyPhone': ?emergencyPhone,
+      'city': ?city,
     });
     return User.fromJson(res);
   }

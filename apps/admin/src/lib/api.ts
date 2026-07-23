@@ -63,6 +63,26 @@ export interface AdminRide {
   driverName: string | null;
 }
 
+export interface ReportedUser {
+  userId: string;
+  name: string | null;
+  phone: string | null;
+  reportCount: number;
+  suspendedAt: string | null;
+  lastReportedAt: string;
+}
+
+export interface Dispute {
+  id: string;
+  bookingId: string | null;
+  userId: string;
+  reportedUserId: string | null;
+  category: string;
+  message: string;
+  status: string;
+  createdAt: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -133,5 +153,16 @@ export const api = {
       "/admin/verifications?limit=50"
     ),
   review: (id: string, action: "approve" | "reject", notes?: string) =>
-    request<Verification>("POST", `/admin/verifications/${id}`, { action, notes })
+    request<Verification>("POST", `/admin/verifications/${id}`, { action, notes }),
+
+  reportedUsers: () => request<ReportedUser[]>("GET", "/disputes/admin/reported-users?limit=100"),
+  openDisputes: () => request<Dispute[]>("GET", "/disputes/admin?limit=100"),
+  setSuspended: (userId: string, suspended: boolean, reason?: string) =>
+    request<{ userId: string; suspendedAt: string | null }>(
+      "POST",
+      `/disputes/admin/users/${userId}/suspension`,
+      { suspended, reason }
+    ),
+  resolveDispute: (id: string, status: "resolved" | "dismissed", resolution?: string) =>
+    request<Dispute>("POST", `/disputes/${id}/resolve`, { status, resolution })
 };

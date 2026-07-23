@@ -49,6 +49,12 @@ export interface NewRide {
   vehicleType: RideVehicleType;
   ladiesOnly: boolean;
   city: string;
+  /**
+   * Driving polyline as [lat, lng] pairs. Optional and best-effort: when the
+   * router is unreachable the ride still posts and falls back to endpoint
+   * matching. This is what makes along-the-route pickups possible.
+   */
+  routePoints?: Array<[number, number]>;
 }
 
 export interface RideSearch {
@@ -63,6 +69,14 @@ export interface RideSearch {
   vehicleType?: RideVehicleType;
   vertical?: Vertical;
   city?: string;
+  /**
+   * Also match rides whose stored route passes near BOTH points, even when the
+   * driver's own origin/destination are far away — the core of carpooling.
+   * Set false to restrict to endpoint matches only.
+   */
+  alongRoute?: boolean;
+  /** Driver ids to hide (mutual blocks) — safety, applied before paging. */
+  excludeDriverIds?: string[];
   cursor: string | null;
   limit: number;
 }
@@ -81,6 +95,18 @@ export interface RideRepository {
   listByDriver(driverId: string, cursor: string | null, limit: number): Promise<RidePage>;
   /** Driver adjusts total seats; available/status recomputed off reserved seats. */
   updateSeats(rideId: string, driverId: string, seatsTotal: number): Promise<RideRecord | null>;
+}
+
+/**
+ * GeoJSON LineString for PostGIS, or null when there is no usable route.
+ * Input is [lat, lng]; GeoJSON is [lng, lat].
+ */
+function routeLineGeoJson(points?: Array<[number, number]>): string | null {
+  if (!points || points.length < 2) return null;
+  return JSON.stringify({
+    type: "LineString",
+    coordinates: points.map(([lat, lng]) => [lng, lat])
+  });
 }
 
 function encodeCursor(r: RideRecord): string {
@@ -128,18 +154,21 @@ export class PgRideRepository implements RideRepository {
       `INSERT INTO rides
          (driver_id, vehicle_id, origin_label, origin_geo, dest_label, dest_geo,
           depart_at, recurring_days, seats_total, seats_available, price_per_seat,
-          vertical, vehicle_type, ladies_only, city)
+          vertical, vehicle_type, ladies_only, city, route_line)
        VALUES ($1, $2, $3,
           ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography,
           $6,
           ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography,
-          $9, $10, $11, $11, $12, $13, $14, $15, $16)
+          $9, $10, $11, $11, $12, $13, $14, $15, $16,
+          CASE WHEN $17::jsonb IS NULL THEN NULL
+               ELSE ST_SetSRID(ST_GeomFromGeoJSON($17::jsonb), 4326)::geography END)
        RETURNING ${COLS}`,
       [
         r.driverId, r.vehicleId, r.originLabel, r.originLng, r.originLat,
         r.destLabel, r.destLng, r.destLat,
         r.departAt, r.recurringDays, r.seatsTotal, r.pricePerSeat,
-        r.vertical, r.vehicleType, r.ladiesOnly, r.city
+        r.vertical, r.vehicleType, r.ladiesOnly, r.city,
+        routeLineGeoJson(r.routePoints)
       ]
     );
     return rows[0];
@@ -161,17 +190,39 @@ export class PgRideRepository implements RideRepository {
       p.pickupLng, p.pickupLat, p.dropLng, p.dropLat, p.radiusM,
       p.departAfter, p.departBefore, p.limit + 1
     ];
+    // Endpoint match: the driver starts and ends near the rider (the classic
+    // case). Corridor match: the rider joins somewhere ALONG the driver's
+    // route — ST_LineLocatePoint gives each point's 0..1 position on the line,
+    // and requiring pickup < drop rejects riders travelling the opposite way.
+    // Both branches are GiST-index-backed (origin/dest_geo and route_line).
+    const endpointMatch = `(
+          ST_DWithin(r.origin_geo, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
+      AND ST_DWithin(r.dest_geo,   ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
+    )`;
+    const corridorMatch = `(
+          r.route_line IS NOT NULL
+      AND ST_DWithin(r.route_line, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
+      AND ST_DWithin(r.route_line, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)
+      AND ST_LineLocatePoint(r.route_line::geometry, ST_SetSRID(ST_MakePoint($1, $2), 4326))
+        < ST_LineLocatePoint(r.route_line::geometry, ST_SetSRID(ST_MakePoint($3, $4), 4326))
+    )`;
+    const geoMatch =
+      p.alongRoute === false ? endpointMatch : `(${endpointMatch} OR ${corridorMatch})`;
+
     let sql = `
       SELECT ${COLS_R} FROM rides r LEFT JOIN users u ON u.id = r.driver_id
       WHERE r.status = 'open'
         AND r.seats_available > 0
         AND COALESCE(u.is_online, true) = true
         AND r.depart_at BETWEEN $6 AND $7
-        AND ST_DWithin(r.origin_geo, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $5)
-        AND ST_DWithin(r.dest_geo,   ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5)`;
+        AND ${geoMatch}`;
     if (p.ladiesOnly !== undefined) {
       params.push(p.ladiesOnly);
       sql += ` AND r.ladies_only = $${params.length}`;
+    }
+    if (p.excludeDriverIds?.length) {
+      params.push(p.excludeDriverIds);
+      sql += ` AND r.driver_id <> ALL($${params.length}::uuid[])`;
     }
     if (p.vehicleType) {
       params.push(p.vehicleType);
@@ -231,6 +282,56 @@ export class PgRideRepository implements RideRepository {
   }
 }
 
+/**
+ * Distance from a point to a polyline, plus how far along that line the
+ * closest position sits (0..1) — the in-memory stand-in for ST_DWithin +
+ * ST_LineLocatePoint. Segments are short enough in a city that treating
+ * lat/lng as planar (scaled for longitude) is accurate to a few metres.
+ */
+export function pointOnRoute(
+  points: Array<[number, number]>,
+  lat: number,
+  lng: number
+): { distanceM: number; position: number } {
+  let best = { distanceM: Number.POSITIVE_INFINITY, position: 0 };
+  const lengths: number[] = [];
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const seg = distanceM(points[i - 1]![0], points[i - 1]![1], points[i]![0], points[i]![1]);
+    lengths.push(seg);
+    total += seg;
+  }
+
+  let travelled = 0;
+  for (let i = 1; i < points.length; i++) {
+    const [aLat, aLng] = points[i - 1]!;
+    const [bLat, bLng] = points[i]!;
+    // Project onto the segment in a locally-planar frame.
+    const scale = Math.cos((aLat * Math.PI) / 180);
+    const ax = aLng * scale;
+    const ay = aLat;
+    const bx = bLng * scale;
+    const by = bLat;
+    const px = lng * scale;
+    const py = lat;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+    const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
+    const closestLat = ay + t * dy;
+    const closestLng = (ax + t * dx) / scale;
+    const d = distanceM(lat, lng, closestLat, closestLng);
+    if (d < best.distanceM) {
+      best = {
+        distanceM: d,
+        position: total === 0 ? 0 : (travelled + lengths[i - 1]! * t) / total
+      };
+    }
+    travelled += lengths[i - 1]!;
+  }
+  return best;
+}
+
 /** Haversine metres — mirrors ST_DWithin semantics closely enough for dev. */
 export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -242,17 +343,39 @@ export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+/** Mirrors the SQL geo predicate: endpoint match OR along-the-route match. */
+function matchesGeo(r: RideRecord & { routePoints?: Array<[number, number]> }, p: RideSearch): boolean {
+  const endpoint =
+    distanceM(r.originLat, r.originLng, p.pickupLat, p.pickupLng) <= p.radiusM &&
+    distanceM(r.destLat, r.destLng, p.dropLat, p.dropLng) <= p.radiusM;
+  if (endpoint) return true;
+  if (p.alongRoute === false) return false;
+
+  const route = r.routePoints;
+  if (!route || route.length < 2) return false;
+  const pickup = pointOnRoute(route, p.pickupLat, p.pickupLng);
+  const drop = pointOnRoute(route, p.dropLat, p.dropLng);
+  return (
+    pickup.distanceM <= p.radiusM &&
+    drop.distanceM <= p.radiusM &&
+    pickup.position < drop.position // same direction of travel
+  );
+}
+
 export class InMemoryRideRepository implements RideRepository {
-  private readonly items = new Map<string, RideRecord>();
+  private readonly items = new Map<string, RideRecord & { routePoints?: Array<[number, number]> }>();
   private seq = 0;
 
   async create(r: NewRide): Promise<RideRecord> {
-    const rec: RideRecord = {
+    // routePoints is kept alongside the record so the in-memory search can
+    // mirror the SQL corridor predicate; it is not part of the public record.
+    const rec: RideRecord & { routePoints?: Array<[number, number]> } = {
       id: `ride-${String(++this.seq).padStart(4, "0")}`,
       status: "open",
       seatsAvailable: r.seatsTotal,
       paymentMethod: "cash",
-      ...r
+      ...r,
+      routePoints: r.routePoints
     };
     this.items.set(rec.id, rec);
     return rec;
@@ -271,8 +394,8 @@ export class InMemoryRideRepository implements RideRepository {
           r.seatsAvailable > 0 &&
           r.departAt >= p.departAfter &&
           r.departAt <= p.departBefore &&
-          distanceM(r.originLat, r.originLng, p.pickupLat, p.pickupLng) <= p.radiusM &&
-          distanceM(r.destLat, r.destLng, p.dropLat, p.dropLng) <= p.radiusM &&
+          matchesGeo(r, p) &&
+          !(p.excludeDriverIds ?? []).includes(r.driverId) &&
           (p.ladiesOnly === undefined || r.ladiesOnly === p.ladiesOnly) &&
           (!p.vehicleType || r.vehicleType === p.vehicleType) &&
           (!p.vertical || r.vertical === p.vertical) &&

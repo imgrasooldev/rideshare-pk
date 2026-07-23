@@ -35,6 +35,7 @@ import 'features/referrals/data/referrals_repository.dart';
 import 'features/settings/locale_cubit.dart';
 import 'features/rides/bloc/ride_search_bloc.dart';
 import 'features/rides/data/rides_repository.dart';
+import 'features/safety/data/blocks_repository.dart';
 import 'features/subscriptions/bloc/subscriptions_cubit.dart';
 import 'features/subscriptions/data/subscriptions_repository.dart';
 import 'features/tracking/data/tracking_repository.dart';
@@ -90,6 +91,7 @@ Future<void> main() async {
         RepositoryProvider(create: (_) => TrackingRepository(api, storage)),
         RepositoryProvider(create: (_) => ReferralsRepository(api)),
         RepositoryProvider(create: (_) => DisputesRepository(api)),
+        RepositoryProvider(create: (_) => BlocksRepository(api)),
       ],
       child: MultiBlocProvider(
         providers: [

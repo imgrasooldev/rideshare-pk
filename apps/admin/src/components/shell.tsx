@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Car,
+  Flag,
   LayoutDashboard,
   LogOut,
   ShieldCheck,
@@ -16,6 +17,7 @@ import { ThemeToggle } from "@/components/theme";
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/verifications/", label: "Verifications", icon: ShieldCheck },
+  { href: "/safety/", label: "Safety", icon: Flag },
   { href: "/rides/", label: "Rides", icon: Car },
   { href: "/users/", label: "Users", icon: UsersIcon }
 ];

@@ -15,6 +15,8 @@ export interface UserRecord {
   /** Encrypted at rest (AES-GCM) — never expose raw; mask via UsersService. */
   cnic: string | null;
   verified: boolean;
+  /** Set when an admin suspended the account; blocks sign-in and actions. */
+  suspendedAt?: string | null;
   isAdmin: boolean;
   city: string;
   ratingAvg: number;
@@ -30,6 +32,7 @@ export interface ProfilePatch {
   gender?: NonNullable<UserRecord["gender"]>;
   cnic?: string; // already encrypted by the service layer
   emergencyPhone?: string; // already normalised to E.164 by the service layer
+  city?: string; // already validated against the cities table by the service layer
 }
 
 export interface NewEmailUser {
@@ -57,7 +60,8 @@ export interface UserRepository {
 const COLS = `id, phone, email, email_verified AS "emailVerified", password_hash AS "passwordHash",
   name, role, gender, cnic, verified, is_admin AS "isAdmin", city,
   rating_avg::float8 AS "ratingAvg", rating_count AS "ratingCount",
-  emergency_phone AS "emergencyPhone", is_online AS "isOnline"`;
+  emergency_phone AS "emergencyPhone", is_online AS "isOnline",
+  suspended_at AS "suspendedAt"`;
 
 export class PgUserRepository implements UserRepository {
   constructor(private readonly pool: Pool) {}
@@ -120,6 +124,7 @@ export class PgUserRepository implements UserRepository {
          gender = COALESCE($4, gender),
          cnic = COALESCE($5, cnic),
          emergency_phone = COALESCE($6, emergency_phone),
+         city = COALESCE($7, city),
          updated_at = now()
        WHERE id = $1 AND deleted_at IS NULL
        RETURNING ${COLS}`,
@@ -129,7 +134,8 @@ export class PgUserRepository implements UserRepository {
         patch.role ?? null,
         patch.gender ?? null,
         patch.cnic ?? null,
-        patch.emergencyPhone ?? null
+        patch.emergencyPhone ?? null,
+        patch.city ?? null
       ]
     );
     return rows[0] ?? null;
@@ -232,6 +238,7 @@ export class InMemoryUserRepository implements UserRepository {
     if (patch.gender !== undefined) user.gender = patch.gender;
     if (patch.cnic !== undefined) user.cnic = patch.cnic;
     if (patch.emergencyPhone !== undefined) user.emergencyPhone = patch.emergencyPhone;
+    if (patch.city !== undefined) user.city = patch.city;
     return user;
   }
 

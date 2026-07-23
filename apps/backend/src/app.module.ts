@@ -17,6 +17,7 @@ import { RatingsModule } from "./ratings/ratings.module.js";
 import { ReferralsModule } from "./referrals/referrals.module.js";
 import { SubscriptionsModule } from "./subscriptions/subscriptions.module.js";
 import { RidesModule } from "./rides/rides.module.js";
+import { BlocksModule } from "./safety/blocks.module.js";
 import { StorageModule } from "./storage/storage.module.js";
 import { TrackingModule } from "./tracking/tracking.module.js";
 import { TrustModule } from "./trust/trust.module.js";
@@ -39,6 +40,7 @@ const adminDist = process.env.ADMIN_STATIC_DIR ?? join(process.cwd(), "..", "adm
     VehiclesModule, TrustModule, RidesModule, BookingsModule,
     TrackingModule, RatingsModule, PlacesModule, NotificationsModule,
     SubscriptionsModule, EarningsModule, CategoriesModule, MessagesModule, StorageModule,
+    BlocksModule,
     WalletModule, PushModule, ReferralsModule, DisputesModule
   ]
 })

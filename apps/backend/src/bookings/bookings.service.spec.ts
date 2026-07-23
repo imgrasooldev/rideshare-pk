@@ -4,6 +4,7 @@ import { NotificationsService } from "../notifications/notifications.service.js"
 import { PushService } from "../push/push.service.js";
 import type { AppConfig } from "../config/config.js";
 import { InMemoryRideRepository, type RideRecord } from "../rides/rides.repo.js";
+import { InMemoryBlocksRepository } from "../safety/blocks.repo.js";
 import { InMemoryUserRepository } from "../users/users.repo.js";
 import { InMemoryBookingRepository } from "./bookings.repo.js";
 import { BookingsService } from "./bookings.service.js";
@@ -11,6 +12,7 @@ import { BookingsService } from "./bookings.service.js";
 describe("BookingsService", () => {
   let users: InMemoryUserRepository;
   let rides: InMemoryRideRepository;
+  let blocks: InMemoryBlocksRepository;
   let service: BookingsService;
   let driverId: string;
   let riderId: string;
@@ -41,10 +43,12 @@ describe("BookingsService", () => {
   beforeEach(async () => {
     users = new InMemoryUserRepository();
     rides = new InMemoryRideRepository();
+    blocks = new InMemoryBlocksRepository();
     service = new BookingsService(
       new InMemoryBookingRepository(rides),
       rides,
       users,
+      blocks,
       new NotificationsService(
         new InMemoryNotificationRepository(),
         new PushService(null, { FIREBASE_SERVICE_ACCOUNT: "", FIREBASE_PROJECT_ID: "" } as AppConfig)
@@ -123,6 +127,93 @@ describe("BookingsService", () => {
     const confirmed = await service.respondToCounter(riderId, r2.id, true);
     expect(confirmed.status).toBe("confirmed");
     expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
+  });
+
+  it("refuses a booking when either party has blocked the other", async () => {
+    await blocks.block(riderId, driverId, "unsafe driving");
+    await expect(service.book(riderId, ride.id, 1, "blk1")).rejects.toThrow(/not available to you/);
+
+    // Symmetric: the driver blocking the rider also prevents the request.
+    await blocks.unblock(riderId, driverId);
+    await blocks.block(driverId, riderId, null);
+    await expect(service.book(riderId, ride.id, 1, "blk2")).rejects.toThrow(/not available to you/);
+
+    // And once unblocked, booking works again.
+    await blocks.unblock(driverId, riderId);
+    await expect(service.book(riderId, ride.id, 1, "blk3")).resolves.toBeTruthy();
+  });
+
+  describe("trip start PIN", () => {
+    it("issues a 4-digit PIN to the rider on confirmation", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin1");
+      expect(b.startPin).toBeUndefined(); // not while merely requested
+
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      expect(confirmed.startPin).toMatch(/^\d{4}$/);
+      expect(confirmed.pickedUpAt).toBeFalsy();
+    });
+
+    it("surfaces the PIN on the rider's own bookings list", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin1b");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+
+      // The rider reads their PIN from this list in the app — the confirm
+      // response alone is not where they see it.
+      const page = await service.mine(riderId, null, 20);
+      const mine = page.items.find((x) => x.id === b.id);
+      expect(mine!.startPin).toBe(confirmed.startPin);
+      expect(mine!.startPin).toMatch(/^\d{4}$/);
+    });
+
+    it("never exposes the PIN on the driver's passenger manifest", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin2");
+      await service.respond(driverId, b.id, "accept");
+
+      // The whole point: the driver must ask the passenger for it.
+      const manifest = await service.ridePassengers(driverId, ride.id);
+      expect(manifest).toHaveLength(1);
+      expect(manifest[0]!.startPin).toBeUndefined();
+    });
+
+    it("confirms pickup with the right PIN and rejects a wrong one", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin3");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      const pin = confirmed.startPin!;
+      const wrong = pin === "0000" ? "1111" : "0000";
+
+      await expect(service.verifyStartPin(driverId, b.id, wrong)).rejects.toThrow(/Incorrect PIN/);
+
+      const picked = await service.verifyStartPin(driverId, b.id, pin);
+      expect(picked.pickedUpAt).toBeTruthy();
+
+      // Single-shot: a second pickup is refused.
+      await expect(service.verifyStartPin(driverId, b.id, pin)).rejects.toThrow(
+        /already picked up/
+      );
+    });
+
+    it("locks the PIN after repeated wrong guesses (10k combinations)", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin4");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      const pin = confirmed.startPin!;
+      const wrong = pin === "0000" ? "1111" : "0000";
+
+      for (let i = 0; i < 5; i++) {
+        await expect(service.verifyStartPin(driverId, b.id, wrong)).rejects.toThrow(/Incorrect/);
+      }
+      // Even the CORRECT PIN is refused once locked.
+      await expect(service.verifyStartPin(driverId, b.id, pin)).rejects.toThrow(/Too many/);
+    });
+
+    it("only the ride's own driver can verify a PIN", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin5");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      const stranger = await users.upsertByPhone("+923007777777", "lahore");
+
+      await expect(
+        service.verifyStartPin(stranger.id, b.id, confirmed.startPin!)
+      ).rejects.toThrow(/not found|not on your ride/i);
+    });
   });
 
   it("driver marks a confirmed rider a no-show, freeing the seat", async () => {

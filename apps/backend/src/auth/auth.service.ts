@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Inject,
@@ -160,6 +161,13 @@ export class AuthService {
   }
 
   private async issueTokens(user: UserRecord): Promise<AuthResult> {
+    // Single choke point for every sign-in path (OTP, password, social,
+    // refresh), so a suspended account cannot obtain a token anywhere.
+    if (user.suspendedAt) {
+      throw new ForbiddenException(
+        "Your account has been suspended. Contact support@rideshare.pk."
+      );
+    }
     const accessToken = this.tokens.signAccess({ sub: user.id, phone: user.phone });
     const { token: refreshToken, jti } = this.tokens.signRefresh(user.id);
     await this.kv.set(`refresh:${jti}`, user.id, this.config.JWT_REFRESH_TTL);

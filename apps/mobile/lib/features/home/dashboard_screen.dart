@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../app_mode/app_mode_cubit.dart';
+import '../auth/bloc/auth_bloc.dart';
+import '../auth/data/auth_repository.dart';
 import '../auth/data/models/user.dart';
 import '../bookings/bloc/my_bookings_bloc.dart';
 import '../categories/bloc/categories_cubit.dart';
@@ -82,6 +84,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ));
   }
 
+  /// Save the picked city to the account so it survives a restart, and so rides
+  /// this user posts are filed under the city they actually travel in.
+  ///
+  /// The hubs have already been swapped locally, so this is a background
+  /// sync: if it fails the user still browses the city they chose this
+  /// session, and we say so rather than yanking the UI back.
+  Future<void> _persistCity(String slug) async {
+    if (slug == widget.user.city) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final authBloc = context.read<AuthBloc>();
+    try {
+      final user = await context.read<AuthRepository>().updateProfile(city: slug);
+      authBloc.add(AuthProfileRefreshed(user));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't save your city — showing it for this session only")),
+      );
+    }
+  }
+
   void _openCityPicker() {
     final cubit = context.read<PlacesCubit>();
     showModalBottomSheet<void>(
@@ -111,6 +133,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () {
                   cubit.load(c.slug);
                   Navigator.of(context).pop();
+                  _persistCity(c.slug);
                 },
               ),
             const SizedBox(height: 8),
