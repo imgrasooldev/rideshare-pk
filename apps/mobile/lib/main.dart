@@ -32,6 +32,7 @@ import 'features/places/bloc/places_cubit.dart';
 import 'features/places/data/places_repository.dart';
 import 'features/profile/bloc/profile_cubit.dart';
 import 'features/referrals/data/referrals_repository.dart';
+import 'features/settings/locale_cubit.dart';
 import 'features/rides/bloc/ride_search_bloc.dart';
 import 'features/rides/data/rides_repository.dart';
 import 'features/subscriptions/bloc/subscriptions_cubit.dart';
@@ -93,6 +94,7 @@ Future<void> main() async {
       child: MultiBlocProvider(
         providers: [
           BlocProvider.value(value: authBloc),
+          BlocProvider(create: (context) => LocaleCubit()),
           BlocProvider(create: (context) => AppModeCubit()),
           BlocProvider(create: (context) => RideSearchBloc(context.read<RidesRepository>())),
           BlocProvider(create: (context) => PlacesCubit(context.read<PlacesRepository>())),

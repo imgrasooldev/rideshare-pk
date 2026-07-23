@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../app_mode/app_mode_cubit.dart';
 import '../auth/data/models/user.dart';
 import '../bookings/bloc/my_bookings_bloc.dart';
@@ -124,15 +125,17 @@ class _PassengerShellState extends State<PassengerShell> {
             context.read<VerificationsCubit>().load();
           }
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home_rounded),
+              label: L.of(context).navHome),
+          NavigationDestination(icon: const Icon(Icons.search), label: L.of(context).navSearch),
           NavigationDestination(
-              icon: Icon(Icons.confirmation_number_outlined), label: 'Bookings'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+              icon: const Icon(Icons.confirmation_number_outlined),
+              label: L.of(context).navBookings),
+          NavigationDestination(
+              icon: const Icon(Icons.person_outline), label: L.of(context).navProfile),
         ],
       ),
     );

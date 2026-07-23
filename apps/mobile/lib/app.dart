@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/push/push_service.dart' show scaffoldMessengerKey;
 import 'core/theme/app_theme.dart';
 import 'features/app_mode/app_mode_cubit.dart';
 import 'features/auth/bloc/auth_bloc.dart';
+import 'features/settings/locale_cubit.dart';
+import 'l10n/app_localizations.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -16,14 +19,28 @@ class RideshareApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Rideshare PK',
-      debugShowCheckedModeBanner: false,
-      scaffoldMessengerKey: scaffoldMessengerKey,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      home: const _RootGate(),
+    return BlocBuilder<LocaleCubit, Locale>(
+      builder: (context, locale) => MaterialApp(
+        title: 'Rideshare PK',
+        debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: scaffoldMessengerKey,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.system,
+        locale: locale,
+        localizationsDelegates: const [
+          L.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: L.supportedLocales,
+        // First pass keeps LTR layout while showing Urdu strings; full RTL is
+        // a follow-up once each screen is QA'd for mirroring.
+        builder: (context, child) =>
+            Directionality(textDirection: TextDirection.ltr, child: child!),
+        home: const _RootGate(),
+      ),
     );
   }
 }

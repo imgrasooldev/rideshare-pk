@@ -25,6 +25,7 @@ import 'package:rideshare_mobile/features/places/data/places_repository.dart';
 import 'package:rideshare_mobile/features/profile/bloc/profile_cubit.dart';
 import 'package:rideshare_mobile/features/rides/bloc/ride_search_bloc.dart';
 import 'package:rideshare_mobile/features/rides/data/rides_repository.dart';
+import 'package:rideshare_mobile/features/settings/locale_cubit.dart';
 import 'package:rideshare_mobile/features/subscriptions/bloc/subscriptions_cubit.dart';
 import 'package:rideshare_mobile/features/subscriptions/data/subscriptions_repository.dart';
 import 'package:rideshare_mobile/features/trust/bloc/verifications_cubit.dart';
@@ -65,6 +66,7 @@ Widget buildApp({
     ],
     child: MultiBlocProvider(
       providers: [
+        BlocProvider(create: (_) => LocaleCubit()),
         BlocProvider(create: (_) => AppModeCubit()),
         BlocProvider(create: (_) => AuthBloc(auth)..add(const AuthStarted())),
         BlocProvider(create: (_) => RideSearchBloc(rides)),

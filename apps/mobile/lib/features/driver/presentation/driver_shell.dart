@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../app_mode/app_mode_cubit.dart';
 import '../../auth/data/models/user.dart';
 import '../../earnings/bloc/earnings_cubit.dart';
@@ -76,14 +77,15 @@ class _DriverShellState extends State<DriverShell> {
             context.read<VerificationsCubit>().load();
           }
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard'),
+              icon: const Icon(Icons.dashboard_outlined),
+              selectedIcon: const Icon(Icons.dashboard_rounded),
+              label: L.of(context).navDashboard),
           NavigationDestination(
-              icon: Icon(Icons.directions_car_outlined), label: 'Rides'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+              icon: const Icon(Icons.directions_car_outlined), label: L.of(context).navRides),
+          NavigationDestination(
+              icon: const Icon(Icons.person_outline), label: L.of(context).navProfile),
         ],
       ),
     );
