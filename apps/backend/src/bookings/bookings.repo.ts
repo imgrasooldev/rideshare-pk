@@ -479,6 +479,9 @@ export class PgBookingRepository implements BookingRepository {
       offeredPrice: r.offeredPrice,
       idempotencyKey: r.idempotencyKey,
       createdAt: r.createdAt,
+      // Rider-only: their pickup PIN and whether the driver has confirmed it.
+      startPin: r.startPin,
+      pickedUpAt: r.pickedUpAt,
       ride: {
         originLabel: r.originLabel,
         destLabel: r.destLabel,

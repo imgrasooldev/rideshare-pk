@@ -135,6 +135,18 @@ describe("BookingsService", () => {
       expect(confirmed.pickedUpAt).toBeFalsy();
     });
 
+    it("surfaces the PIN on the rider's own bookings list", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin1b");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+
+      // The rider reads their PIN from this list in the app — the confirm
+      // response alone is not where they see it.
+      const page = await service.mine(riderId, null, 20);
+      const mine = page.items.find((x) => x.id === b.id);
+      expect(mine!.startPin).toBe(confirmed.startPin);
+      expect(mine!.startPin).toMatch(/^\d{4}$/);
+    });
+
     it("never exposes the PIN on the driver's passenger manifest", async () => {
       const b = await service.book(riderId, ride.id, 1, "pin2");
       await service.respond(driverId, b.id, "accept");
