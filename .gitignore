@@ -9,3 +9,6 @@ coverage/
 .env.*.local
 .DS_Store
 Thumbs.db
+
+# Local-only credentials reference (never commit)
+CREDENTIALS.local.md
