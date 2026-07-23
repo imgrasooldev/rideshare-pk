@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module.js";
 import { loadConfig } from "./config/config.js";
+import { requestLogger } from "./shared/request-logger.js";
 
 async function bootstrap() {
   const config = loadConfig();
@@ -20,6 +21,7 @@ async function bootstrap() {
   // console from browser origins — CORS open by design.
   app.enableCors({ origin: true, methods: "GET,POST,PATCH,DELETE,OPTIONS" });
   app.setGlobalPrefix("api/v1", { exclude: ["health", "health/ready"] });
+  app.use(requestLogger);
   app.enableShutdownHooks();
   await app.listen(config.PORT);
   console.log(JSON.stringify({ level: "info", msg: "backend listening", port: config.PORT }));
