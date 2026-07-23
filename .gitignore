@@ -7,5 +7,12 @@ coverage/
 .env
 .env.local
 .env.*.local
+
+# Android release signing — NEVER commit. Losing the keystore means you can
+# never publish an update to an already-published app.
+**/key.properties
+*.jks
+*.keystore
+.secrets/
 .DS_Store
 Thumbs.db
