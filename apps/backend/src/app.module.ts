@@ -5,6 +5,7 @@ import { ServeStaticModule } from "@nestjs/serve-static";
 import { AuthModule } from "./auth/auth.module.js";
 import { BookingsModule } from "./bookings/bookings.module.js";
 import { CategoriesModule } from "./categories/categories.module.js";
+import { CreditsModule } from "./credits/credits.module.js";
 import { DisputesModule } from "./disputes/disputes.module.js";
 import { EarningsModule } from "./earnings/earnings.module.js";
 import { FavouritesModule } from "./favourites/favourites.module.js";
@@ -43,7 +44,7 @@ const adminDist = process.env.ADMIN_STATIC_DIR ?? join(process.cwd(), "..", "adm
     SubscriptionsModule, EarningsModule, CategoriesModule, MessagesModule, StorageModule,
     BlocksModule,
     WalletModule, PushModule, ReferralsModule, DisputesModule,
-    FavouritesModule
+    FavouritesModule, CreditsModule
   ]
 })
 export class AppModule {}
