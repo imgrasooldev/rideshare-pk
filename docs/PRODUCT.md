@@ -67,6 +67,8 @@ account to `both` (keeps rider abilities) and enters Driver Mode.
 - Two‑way **ratings** (rider↔driver), surfaced on ride cards.
 - **Emergency contact** + **SOS** (logs position, SMS‑alerts the contact with a
   live‑location link), **share‑live‑trip** link.
+- **Block a user**, **report/suspension** pipeline, and **pickup PIN** enforced
+  at trip start (migrations 0015–0016).
 
 **Discovery & booking (the dispatch loop)**
 - Dynamic **category grid** (`/categories`) filtering search by vertical.
@@ -169,6 +171,9 @@ apply with a one‑off `pg` script (see §9).
 | `0012` | `cancel_reason` + `no_show` status |
 | `0013` | `referral_code` + `referrals` |
 | `0014` | `disputes` |
+| `0015` | trip‑start PIN (pickup OTP) |
+| `0016` | blocks / reports / suspension |
+| `0017` | Karachi hubs / routes |
 
 Notable columns: `rides.vertical` (category), `rides.origin_geo/dest_geo`
 (`geography(Point)`), `users.rating_avg/rating_count` (cached, maintained by
