@@ -1,4 +1,27 @@
+import { BadRequestException } from "@nestjs/common";
 import type { Pool } from "pg";
+import { COMMISSION_RATE } from "../shared/commission.js";
+
+export interface RevenueSummary {
+  commissionRate: number;
+  grossFares: number; // all confirmed+completed fares across the marketplace (PKR)
+  commissionAccrued: number; // platform's 10% share of those fares
+  commissionCollected: number; // settlements paid back to date
+  commissionOutstanding: number; // Σ per-driver owed (each floored at 0)
+  collectedThisMonth: number;
+  driversOwing: number; // how many drivers still owe something
+}
+
+export interface DriverSettlementRow {
+  driverId: string;
+  name: string | null;
+  phone: string | null;
+  grossFares: number;
+  commissionAccrued: number;
+  collected: number;
+  owed: number;
+  lastSettledAt: string | null;
+}
 
 export interface MarketplaceMetrics {
   totalUsers: number;
@@ -55,7 +78,24 @@ export interface AdminInsightsRepository {
   recentUsers(limit: number): Promise<AdminUserRow[]>;
   recentRides(limit: number): Promise<AdminRideRow[]>;
   timeseries(days: number): Promise<DayPoint[]>;
+  revenue(): Promise<RevenueSummary>;
+  driverSettlements(limit: number): Promise<DriverSettlementRow[]>;
+  /** Admin records a cash commission collection from a driver (capped to owed). */
+  recordCollection(
+    driverId: string,
+    amount: number,
+    reference: string | null
+  ): Promise<{ collected: number; owed: number }>;
 }
+
+// Shared SQL fragment: gross confirmed/completed fares per driver.
+const FARES_CTE = `fares AS (
+  SELECT r.driver_id,
+    COALESCE(SUM(b.seats * COALESCE(b.offered_price, r.price_per_seat)), 0)::int AS gross
+  FROM rides r JOIN bookings b ON b.ride_id = r.id
+  WHERE b.status IN ('confirmed', 'completed')
+  GROUP BY r.driver_id
+)`;
 
 export class PgAdminInsightsRepository implements AdminInsightsRepository {
   constructor(private readonly pool: Pool) {}
@@ -121,6 +161,84 @@ export class PgAdminInsightsRepository implements AdminInsightsRepository {
     );
     return rows;
   }
+
+  async revenue(): Promise<RevenueSummary> {
+    const { rows } = await this.pool.query(
+      `WITH ${FARES_CTE},
+       paid AS (
+         SELECT driver_id, COALESCE(SUM(amount), 0)::int AS collected
+         FROM settlements GROUP BY driver_id
+       )
+       SELECT
+         COALESCE(SUM(f.gross), 0)::int                                   AS "grossFares",
+         COALESCE(SUM(ROUND(f.gross * $1::numeric)), 0)::int                        AS "commissionAccrued",
+         (SELECT COALESCE(SUM(amount), 0)::int FROM settlements)           AS "commissionCollected",
+         COALESCE(SUM(GREATEST(0, ROUND(f.gross * $1::numeric)::int - COALESCE(p.collected, 0))), 0)::int
+                                                                          AS "commissionOutstanding",
+         (SELECT COALESCE(SUM(amount), 0)::int FROM settlements
+            WHERE created_at >= date_trunc('month', now()))               AS "collectedThisMonth",
+         COUNT(*) FILTER (
+           WHERE ROUND(f.gross * $1::numeric)::int - COALESCE(p.collected, 0) > 0
+         )::int                                                           AS "driversOwing"
+       FROM fares f LEFT JOIN paid p ON p.driver_id = f.driver_id`,
+      [COMMISSION_RATE]
+    );
+    return { commissionRate: COMMISSION_RATE, ...rows[0] };
+  }
+
+  async driverSettlements(limit: number): Promise<DriverSettlementRow[]> {
+    const { rows } = await this.pool.query(
+      `WITH ${FARES_CTE},
+       paid AS (
+         SELECT driver_id, COALESCE(SUM(amount), 0)::int AS collected, MAX(created_at) AS last_at
+         FROM settlements GROUP BY driver_id
+       )
+       SELECT u.id AS "driverId", u.name, u.phone,
+         COALESCE(f.gross, 0)                                            AS "grossFares",
+         ROUND(COALESCE(f.gross, 0) * $1::numeric)::int                           AS "commissionAccrued",
+         COALESCE(p.collected, 0)                                        AS "collected",
+         GREATEST(0, ROUND(COALESCE(f.gross, 0) * $1::numeric)::int - COALESCE(p.collected, 0)) AS "owed",
+         p.last_at AS "lastSettledAt"
+       FROM users u
+       LEFT JOIN fares f ON f.driver_id = u.id
+       LEFT JOIN paid  p ON p.driver_id = u.id
+       WHERE u.role IN ('driver', 'both') AND u.deleted_at IS NULL
+         AND (COALESCE(f.gross, 0) > 0 OR COALESCE(p.collected, 0) > 0)
+       ORDER BY "owed" DESC, "grossFares" DESC
+       LIMIT $2`,
+      [COMMISSION_RATE, limit]
+    );
+    return rows;
+  }
+
+  async recordCollection(
+    driverId: string,
+    amount: number,
+    reference: string | null
+  ): Promise<{ collected: number; owed: number }> {
+    if (!Number.isInteger(amount) || amount <= 0) {
+      throw new BadRequestException("Enter a valid amount");
+    }
+    // Compute what this driver owes right now, in one round-trip.
+    const owedRes = await this.pool.query<{ owed: number; collected: number }>(
+      `WITH ${FARES_CTE}
+       SELECT GREATEST(0, ROUND(COALESCE((SELECT gross FROM fares WHERE driver_id = $1), 0) * $2::numeric)::int
+                - COALESCE((SELECT SUM(amount)::int FROM settlements WHERE driver_id = $1), 0)) AS owed,
+              COALESCE((SELECT SUM(amount)::int FROM settlements WHERE driver_id = $1), 0) AS collected`,
+      [driverId, COMMISSION_RATE]
+    );
+    const owed = owedRes.rows[0]?.owed ?? 0;
+    if (amount > owed) {
+      throw new BadRequestException(`Driver only owes Rs ${owed}`);
+    }
+    await this.pool.query(
+      `INSERT INTO settlements (driver_id, amount, method, reference)
+       VALUES ($1, $2, 'cash_deposit', $3)`,
+      [driverId, amount, reference]
+    );
+    const collected = (owedRes.rows[0]?.collected ?? 0) + amount;
+    return { collected, owed: owed - amount };
+  }
 }
 
 /** Dev fallback when no database is configured — console shows an empty state. */
@@ -143,5 +261,25 @@ export class StubAdminInsightsRepository implements AdminInsightsRepository {
 
   async timeseries(): Promise<DayPoint[]> {
     return [];
+  }
+
+  async revenue(): Promise<RevenueSummary> {
+    return {
+      commissionRate: COMMISSION_RATE,
+      grossFares: 0,
+      commissionAccrued: 0,
+      commissionCollected: 0,
+      commissionOutstanding: 0,
+      collectedThisMonth: 0,
+      driversOwing: 0
+    };
+  }
+
+  async driverSettlements(): Promise<DriverSettlementRow[]> {
+    return [];
+  }
+
+  async recordCollection(): Promise<{ collected: number; owed: number }> {
+    throw new BadRequestException("Settlements unavailable");
   }
 }

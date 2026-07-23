@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BadgeDollarSign,
   Car,
   Flag,
   LayoutDashboard,
@@ -16,6 +17,7 @@ import { ThemeToggle } from "@/components/theme";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/revenue/", label: "Revenue", icon: BadgeDollarSign },
   { href: "/verifications/", label: "Verifications", icon: ShieldCheck },
   { href: "/safety/", label: "Safety", icon: Flag },
   { href: "/rides/", label: "Rides", icon: Car },

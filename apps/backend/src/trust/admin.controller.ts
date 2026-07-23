@@ -48,7 +48,32 @@ export class AdminInsightsController {
   timeseries(@Query("days") days?: string) {
     return this.insights.timeseries(Math.min(Math.max(Number(days) || 14, 7), 90));
   }
+
+  /** Revenue cockpit: gross fares, commission accrued, collected, outstanding. */
+  @Get("revenue")
+  revenue() {
+    return this.insights.revenue();
+  }
+
+  /** Per-driver commission ledger, worst debtors first. */
+  @Get("settlements")
+  settlements(@Query("limit") limit?: string) {
+    return this.insights.driverSettlements(Math.min(Math.max(Number(limit) || 100, 1), 500));
+  }
+
+  /** Record a cash commission collection from a driver (capped to what they owe). */
+  @Post("settlements/:driverId/collect")
+  @HttpCode(200)
+  collect(@Param("driverId") driverId: string, @Body() body: unknown) {
+    const dto = parse(collectDto, body);
+    return this.insights.recordCollection(driverId, dto.amount, dto.reference ?? null);
+  }
 }
+
+const collectDto = z.object({
+  amount: z.number().int().positive(),
+  reference: z.string().trim().max(200).optional()
+});
 
 @Controller("admin/verifications")
 @UseGuards(AdminGuard)

@@ -83,6 +83,27 @@ export interface Dispute {
   createdAt: string;
 }
 
+export interface RevenueSummary {
+  commissionRate: number;
+  grossFares: number;
+  commissionAccrued: number;
+  commissionCollected: number;
+  commissionOutstanding: number;
+  collectedThisMonth: number;
+  driversOwing: number;
+}
+
+export interface DriverSettlement {
+  driverId: string;
+  name: string | null;
+  phone: string | null;
+  grossFares: number;
+  commissionAccrued: number;
+  collected: number;
+  owed: number;
+  lastSettledAt: string | null;
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -164,5 +185,14 @@ export const api = {
       { suspended, reason }
     ),
   resolveDispute: (id: string, status: "resolved" | "dismissed", resolution?: string) =>
-    request<Dispute>("POST", `/disputes/${id}/resolve`, { status, resolution })
+    request<Dispute>("POST", `/disputes/${id}/resolve`, { status, resolution }),
+
+  revenue: () => request<RevenueSummary>("GET", "/admin/revenue"),
+  settlements: () => request<DriverSettlement[]>("GET", "/admin/settlements?limit=200"),
+  collectCommission: (driverId: string, amount: number, reference?: string) =>
+    request<{ collected: number; owed: number }>(
+      "POST",
+      `/admin/settlements/${driverId}/collect`,
+      { amount, reference }
+    )
 };
