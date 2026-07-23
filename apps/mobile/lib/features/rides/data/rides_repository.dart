@@ -54,11 +54,13 @@ class RidesRepository {
     bool? ladiesOnly,
     String? vehicleType,
     String? vertical,
+    String? driverGender,
     String? cursor,
   }) async {
     final res = await _api.get('/rides/search', query: {
       'vehicleType': ?vehicleType,
       'vertical': ?vertical,
+      'driverGender': ?driverGender,
       'pickupLat': pickup.lat,
       'pickupLng': pickup.lng,
       'dropLat': drop.lat,

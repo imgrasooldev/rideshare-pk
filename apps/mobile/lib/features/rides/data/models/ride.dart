@@ -21,9 +21,19 @@ class Ride extends Equatable {
     this.paymentMethod = 'cash',
     this.driverRatingAvg = 0,
     this.driverRatingCount = 0,
+    this.driverName,
+    this.driverGender,
+    this.driverPhone,
+    this.vehicleMake,
+    this.vehicleModel,
+    this.vehiclePlate,
+    this.vehicleSeats,
   });
 
-  factory Ride.fromJson(Map<String, dynamic> json) => Ride(
+  factory Ride.fromJson(Map<String, dynamic> json) {
+    final driver = json['driver'] as Map<String, dynamic>?;
+    final vehicle = json['vehicle'] as Map<String, dynamic>?;
+    return Ride(
         id: json['id'] as String,
         driverId: json['driverId'] as String,
         originLabel: json['originLabel'] as String,
@@ -41,9 +51,19 @@ class Ride extends Equatable {
         destLng: (json['destLng'] as num?)?.toDouble() ?? 0,
         vehicleType: json['vehicleType'] as String? ?? 'car',
         paymentMethod: json['paymentMethod'] as String? ?? 'cash',
-        driverRatingAvg: (json['driverRatingAvg'] as num?)?.toDouble() ?? 0,
-        driverRatingCount: (json['driverRatingCount'] as num?)?.toInt() ?? 0,
+        driverRatingAvg: (json['driverRatingAvg'] as num?)?.toDouble() ??
+            (driver?['ratingAvg'] as num?)?.toDouble() ?? 0,
+        driverRatingCount: (json['driverRatingCount'] as num?)?.toInt() ??
+            (driver?['ratingCount'] as num?)?.toInt() ?? 0,
+        driverName: json['driverName'] as String? ?? driver?['name'] as String?,
+        driverGender: json['driverGender'] as String? ?? driver?['gender'] as String?,
+        driverPhone: driver?['phone'] as String?,
+        vehicleMake: vehicle?['make'] as String?,
+        vehicleModel: vehicle?['model'] as String?,
+        vehiclePlate: vehicle?['plate'] as String?,
+        vehicleSeats: (vehicle?['seats'] as num?)?.toInt(),
       );
+  }
 
   final String id;
   final String driverId;
@@ -64,12 +84,23 @@ class Ride extends Equatable {
   final String paymentMethod;
   final double driverRatingAvg;
   final int driverRatingCount;
+  final String? driverName;
+  final String? driverGender;
+  /// Revealed only on ride detail after a confirmed booking (else null).
+  final String? driverPhone;
+  final String? vehicleMake;
+  final String? vehicleModel;
+  final String? vehiclePlate;
+  final int? vehicleSeats;
+
+  String get vehicleLabel => [vehicleMake, vehicleModel].where((s) => (s ?? '').isNotEmpty).join(' ');
 
   @override
   List<Object?> get props => [
         id, driverId, originLabel, destLabel, departAt, seatsTotal, seatsAvailable,
         pricePerSeat, ladiesOnly, status, city, originLat, originLng, destLat, destLng,
-        vehicleType, paymentMethod, driverRatingAvg, driverRatingCount
+        vehicleType, paymentMethod, driverRatingAvg, driverRatingCount,
+        driverName, driverGender, driverPhone, vehiclePlate
       ];
 }
 

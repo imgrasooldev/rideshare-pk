@@ -188,6 +188,7 @@ class FakeRidesRepository implements RidesRepository {
     bool? ladiesOnly,
     String? vehicleType,
     String? vertical,
+    String? driverGender,
     String? cursor,
   }) async =>
       RidePage(

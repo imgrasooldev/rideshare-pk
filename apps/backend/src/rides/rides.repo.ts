@@ -30,6 +30,8 @@ export interface RideRecord {
   /** Driver's cached rating aggregate (from users); absent on create(). */
   driverRatingAvg?: number;
   driverRatingCount?: number;
+  driverName?: string | null;
+  driverGender?: "female" | "male" | "other" | null;
 }
 
 export interface NewRide {
@@ -68,6 +70,7 @@ export interface RideSearch {
   ladiesOnly?: boolean;
   vehicleType?: RideVehicleType;
   vertical?: Vertical;
+  driverGender?: "female" | "male" | "other";
   city?: string;
   /**
    * Also match rides whose stored route passes near BOTH points, even when the
@@ -144,7 +147,8 @@ const COLS_R = `r.id, r.driver_id AS "driverId", r.vehicle_id AS "vehicleId",
   r.price_per_seat AS "pricePerSeat", r.vertical, r.vehicle_type AS "vehicleType",
   r.payment_method AS "paymentMethod", r.ladies_only AS "ladiesOnly", r.status, r.city,
   COALESCE(u.rating_avg, 0)::float8 AS "driverRatingAvg",
-  COALESCE(u.rating_count, 0) AS "driverRatingCount"`;
+  COALESCE(u.rating_count, 0) AS "driverRatingCount",
+  u.name AS "driverName", u.gender AS "driverGender"`;
 
 export class PgRideRepository implements RideRepository {
   constructor(private readonly pool: Pool) {}
@@ -231,6 +235,10 @@ export class PgRideRepository implements RideRepository {
     if (p.vertical) {
       params.push(p.vertical);
       sql += ` AND r.vertical = $${params.length}`;
+    }
+    if (p.driverGender) {
+      params.push(p.driverGender);
+      sql += ` AND u.gender = $${params.length}`;
     }
     if (p.city) {
       params.push(p.city);
@@ -399,6 +407,7 @@ export class InMemoryRideRepository implements RideRepository {
           (p.ladiesOnly === undefined || r.ladiesOnly === p.ladiesOnly) &&
           (!p.vehicleType || r.vehicleType === p.vehicleType) &&
           (!p.vertical || r.vertical === p.vertical) &&
+          (!p.driverGender || r.driverGender === p.driverGender) &&
           (!p.city || r.city === p.city)
       )
       .sort((a, b) => a.departAt.localeCompare(b.departAt) || a.id.localeCompare(b.id))

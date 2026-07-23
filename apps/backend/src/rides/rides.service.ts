@@ -11,15 +11,34 @@ import type { BlocksRepository } from "../safety/blocks.repo.js";
 import {
   APP_CONFIG,
   BLOCKS_REPOSITORY,
+  BOOKING_REPOSITORY,
   RIDE_REPOSITORY,
   USER_REPOSITORY,
   VEHICLE_REPOSITORY
 } from "../shared/tokens.js";
+import type { BookingRepository } from "../bookings/bookings.repo.js";
 import type { UserRepository } from "../users/users.repo.js";
 import type { VehicleRepository } from "../vehicles/vehicles.repo.js";
 import type { NewRide, RidePage, RideRecord, RideRepository, RideSearch } from "./rides.repo.js";
 
 export type PostRideInput = Omit<NewRide, "driverId" | "city">;
+
+export interface RideDetail extends RideRecord {
+  driver: {
+    name: string | null;
+    gender: "female" | "male" | "other" | null;
+    ratingAvg: number;
+    ratingCount: number;
+    phone: string | null; // revealed only after a confirmed booking
+  };
+  vehicle: {
+    make: string;
+    model: string;
+    plate: string;
+    vehicleType: string;
+    seats: number;
+  } | null;
+}
 
 @Injectable()
 export class RidesService {
@@ -29,6 +48,7 @@ export class RidesService {
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(VEHICLE_REPOSITORY) private readonly vehicles: VehicleRepository,
     @Inject(BLOCKS_REPOSITORY) private readonly blocks: BlocksRepository,
+    @Inject(BOOKING_REPOSITORY) private readonly bookings: BookingRepository,
     private readonly places?: PlacesRepository
   ) {}
 
@@ -93,6 +113,38 @@ export class RidesService {
     const ride = await this.rides.findById(id);
     if (!ride) throw new NotFoundException("Ride not found");
     return ride;
+  }
+
+  /**
+   * Ride + who's driving + which vehicle. The driver's phone is revealed only
+   * to the driver themselves or a rider with a confirmed booking (privacy).
+   */
+  async getDetail(id: string, viewerId: string): Promise<RideDetail> {
+    const ride = await this.rides.findById(id);
+    if (!ride) throw new NotFoundException("Ride not found");
+    const driver = await this.users.findById(ride.driverId);
+    const vehicle = ride.vehicleId ? await this.vehicles.findById(ride.vehicleId) : null;
+    const canContact =
+      viewerId === ride.driverId || (await this.bookings.hasBookingForRide(viewerId, id));
+    return {
+      ...ride,
+      driver: {
+        name: driver?.name ?? null,
+        gender: driver?.gender ?? null,
+        ratingAvg: driver?.ratingAvg ?? 0,
+        ratingCount: driver?.ratingCount ?? 0,
+        phone: canContact ? driver?.phone ?? null : null
+      },
+      vehicle: vehicle
+        ? {
+            make: vehicle.make,
+            model: vehicle.model,
+            plate: vehicle.plate,
+            vehicleType: ride.vehicleType,
+            seats: vehicle.seats
+          }
+        : null
+    };
   }
 
   /**

@@ -40,6 +40,7 @@ class _SearchScreenState extends State<SearchScreen> {
   late bool _ladiesOnly = widget.initialLadiesOnly;
   String? _vehicleType; // null = any
   late String? _vertical = widget.initialVertical;
+  bool _femaleDriver = false; // prefer women drivers
 
   @override
   void initState() {
@@ -86,6 +87,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ladiesOnly: _ladiesOnly,
           vehicleType: _vehicleType,
           vertical: _vertical,
+          driverGender: _femaleDriver ? 'female' : null,
         ));
   }
 
@@ -188,6 +190,16 @@ class _SearchScreenState extends State<SearchScreen> {
                     onSelected: (_) => setState(() => _vehicleType = type),
                   ),
                 ],
+                const SizedBox(width: 8),
+                FilterChip(
+                  avatar: const Icon(Icons.woman_rounded, size: 16),
+                  label: const Text('Women drivers'),
+                  selected: _femaleDriver,
+                  onSelected: (v) {
+                    setState(() => _femaleDriver = v);
+                    _search();
+                  },
+                ),
               ],
             ),
           ),
@@ -571,6 +583,8 @@ class _RideCard extends StatelessWidget {
               runSpacing: 6,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
+                if (ride.driverName?.trim().isNotEmpty ?? false)
+                  _Meta(icon: Icons.person_rounded, text: ride.driverName!.trim().split(' ').first),
                 _Meta(
                     icon: vehicleTypeIcon(ride.vehicleType),
                     text: vehicleTypeLabel(ride.vehicleType)),

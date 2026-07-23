@@ -6,6 +6,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/route_points.dart';
 import '../../../core/widgets/status_pill.dart';
 import '../../rides/data/rides_repository.dart';
+import '../../rides/presentation/driver_vehicle_sheet.dart';
 import '../../tracking/presentation/live_trip_screen.dart';
 import '../../disputes/presentation/report_sheet.dart';
 import '../bloc/my_bookings_bloc.dart';
@@ -184,6 +185,11 @@ class _BookingCard extends StatelessWidget {
                       icon: const Icon(Icons.my_location_rounded, size: 18),
                       label: const Text('Track ride'),
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Driver & vehicle',
+                    onPressed: () => showDriverSheet(context, booking.rideId),
+                    icon: const Icon(Icons.person_pin_circle_outlined),
                   ),
                   IconButton(
                     tooltip: 'Receipt',

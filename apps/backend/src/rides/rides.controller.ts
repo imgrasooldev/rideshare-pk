@@ -47,6 +47,7 @@ const searchDto = z.object({
   vertical: z
     .enum(["office", "school", "city", "rentacar", "ladies", "parcel", "corporate", "airport", "events"])
     .optional(),
+  driverGender: z.enum(["female", "male", "other"]).optional(),
   city: z.string().optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20)
@@ -79,6 +80,7 @@ export class RidesController {
       alongRoute: dto.alongRoute,
       vehicleType: dto.vehicleType,
       vertical: dto.vertical,
+      driverGender: dto.driverGender,
       city: dto.city,
       cursor: dto.cursor ?? null,
       limit: dto.limit
@@ -94,8 +96,8 @@ export class RidesController {
 
   @Get(":id")
   @UseGuards(JwtAuthGuard)
-  get(@Param("id") id: string) {
-    return this.rides.getById(id);
+  get(@Req() req: AuthedRequest, @Param("id") id: string) {
+    return this.rides.getDetail(id, req.user.sub);
   }
 
   @Patch(":id/seats")
