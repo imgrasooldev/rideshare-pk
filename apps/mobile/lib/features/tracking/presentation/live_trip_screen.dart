@@ -5,7 +5,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../core/widgets/status_pill.dart';
+import '../../places/data/places_repository.dart';
 import '../../rides/data/models/ride.dart';
+import '../../rides/data/rides_repository.dart' show Hub;
 import '../bloc/driver_trip_cubit.dart';
 import '../bloc/rating_cubit.dart';
 import '../bloc/watch_trip_cubit.dart';
@@ -253,6 +255,29 @@ class _TripScaffold extends StatefulWidget {
 
 class _TripScaffoldState extends State<_TripScaffold> {
   final _mapController = MapController();
+  List<LatLng> _route = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRoute();
+  }
+
+  Future<void> _loadRoute() async {
+    final r = widget.ride;
+    if (r.originLat == 0 || r.destLat == 0) return;
+    try {
+      final info = await context.read<PlacesRepository>().route(
+            Hub(r.originLabel, r.originLat, r.originLng),
+            Hub(r.destLabel, r.destLat, r.destLng),
+          );
+      if (mounted && info.points.length > 1) {
+        setState(() => _route = info.points.map((p) => LatLng(p[0], p[1])).toList());
+      }
+    } catch (_) {
+      /* map still shows origin/dest markers */
+    }
+  }
 
   @override
   void didUpdateWidget(_TripScaffold old) {
@@ -284,6 +309,16 @@ class _TripScaffoldState extends State<_TripScaffold> {
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'pk.rideshare.rideshare_mobile',
                 ),
+                if (_route.length > 1)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _route,
+                        strokeWidth: 4,
+                        color: theme.colorScheme.primary.withValues(alpha: 0.75),
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: [
                     Marker(
