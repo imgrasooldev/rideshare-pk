@@ -211,6 +211,7 @@ class FakeRidesRepository implements RidesRepository {
     required int pricePerSeat,
     String vehicleType = 'car',
     bool ladiesOnly = false,
+    bool instantBook = false,
   }) async {
     final ride = Ride(
       id: 'posted-${posted.length + 1}',

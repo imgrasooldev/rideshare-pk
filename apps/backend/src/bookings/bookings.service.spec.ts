@@ -216,6 +216,13 @@ describe("BookingsService", () => {
     });
   });
 
+  it("instant-book rides auto-confirm on booking (no request queue)", async () => {
+    const instant = await makeRide({ instantBook: true });
+    const b = await service.book(riderId, instant.id, 1, "ib1");
+    expect(b.status).toBe("confirmed");
+    expect((await rides.findById(instant.id))!.seatsAvailable).toBe(2);
+  });
+
   it("driver marks a confirmed rider a no-show, freeing the seat", async () => {
     const b = await service.book(riderId, ride.id, 1, "ns1");
     await service.respond(driverId, b.id, "accept");

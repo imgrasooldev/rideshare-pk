@@ -25,6 +25,7 @@ export interface RideRecord {
   vehicleType: RideVehicleType;
   paymentMethod: "cash";
   ladiesOnly: boolean;
+  instantBook: boolean;
   status: RideStatus;
   city: string;
   /** Driver's cached rating aggregate (from users); absent on create(). */
@@ -50,6 +51,7 @@ export interface NewRide {
   vertical: Vertical;
   vehicleType: RideVehicleType;
   ladiesOnly: boolean;
+  instantBook?: boolean;
   city: string;
   /**
    * Driving polyline as [lat, lng] pairs. Optional and best-effort: when the
@@ -133,7 +135,8 @@ const COLS = `id, driver_id AS "driverId", vehicle_id AS "vehicleId",
   depart_at AS "departAt", recurring_days AS "recurringDays",
   seats_total AS "seatsTotal", seats_available AS "seatsAvailable",
   price_per_seat AS "pricePerSeat", vertical, vehicle_type AS "vehicleType",
-  payment_method AS "paymentMethod", ladies_only AS "ladiesOnly", status, city`;
+  payment_method AS "paymentMethod", ladies_only AS "ladiesOnly", status, city,
+  instant_book AS "instantBook"`;
 
 // Same columns, table-qualified with `r`, plus the driver's rating aggregate
 // via a join on users. Used by reads that surface the driver to riders.
@@ -148,7 +151,7 @@ const COLS_R = `r.id, r.driver_id AS "driverId", r.vehicle_id AS "vehicleId",
   r.payment_method AS "paymentMethod", r.ladies_only AS "ladiesOnly", r.status, r.city,
   COALESCE(u.rating_avg, 0)::float8 AS "driverRatingAvg",
   COALESCE(u.rating_count, 0) AS "driverRatingCount",
-  u.name AS "driverName", u.gender AS "driverGender"`;
+  u.name AS "driverName", u.gender AS "driverGender", r.instant_book AS "instantBook"`;
 
 export class PgRideRepository implements RideRepository {
   constructor(private readonly pool: Pool) {}
@@ -158,21 +161,22 @@ export class PgRideRepository implements RideRepository {
       `INSERT INTO rides
          (driver_id, vehicle_id, origin_label, origin_geo, dest_label, dest_geo,
           depart_at, recurring_days, seats_total, seats_available, price_per_seat,
-          vertical, vehicle_type, ladies_only, city, route_line)
+          vertical, vehicle_type, ladies_only, city, route_line, instant_book)
        VALUES ($1, $2, $3,
           ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography,
           $6,
           ST_SetSRID(ST_MakePoint($7, $8), 4326)::geography,
           $9, $10, $11, $11, $12, $13, $14, $15, $16,
           CASE WHEN $17::jsonb IS NULL THEN NULL
-               ELSE ST_SetSRID(ST_GeomFromGeoJSON($17::jsonb), 4326)::geography END)
+               ELSE ST_SetSRID(ST_GeomFromGeoJSON($17::jsonb), 4326)::geography END,
+          $18)
        RETURNING ${COLS}`,
       [
         r.driverId, r.vehicleId, r.originLabel, r.originLng, r.originLat,
         r.destLabel, r.destLng, r.destLat,
         r.departAt, r.recurringDays, r.seatsTotal, r.pricePerSeat,
         r.vertical, r.vehicleType, r.ladiesOnly, r.city,
-        routeLineGeoJson(r.routePoints)
+        routeLineGeoJson(r.routePoints), r.instantBook ?? false
       ]
     );
     return rows[0];
@@ -383,6 +387,7 @@ export class InMemoryRideRepository implements RideRepository {
       seatsAvailable: r.seatsTotal,
       paymentMethod: "cash",
       ...r,
+      instantBook: r.instantBook ?? false,
       routePoints: r.routePoints
     };
     this.items.set(rec.id, rec);

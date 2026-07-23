@@ -21,6 +21,7 @@ class Ride extends Equatable {
     this.paymentMethod = 'cash',
     this.driverRatingAvg = 0,
     this.driverRatingCount = 0,
+    this.instantBook = false,
     this.driverName,
     this.driverGender,
     this.driverPhone,
@@ -55,6 +56,7 @@ class Ride extends Equatable {
             (driver?['ratingAvg'] as num?)?.toDouble() ?? 0,
         driverRatingCount: (json['driverRatingCount'] as num?)?.toInt() ??
             (driver?['ratingCount'] as num?)?.toInt() ?? 0,
+        instantBook: json['instantBook'] as bool? ?? false,
         driverName: json['driverName'] as String? ?? driver?['name'] as String?,
         driverGender: json['driverGender'] as String? ?? driver?['gender'] as String?,
         driverPhone: driver?['phone'] as String?,
@@ -84,6 +86,7 @@ class Ride extends Equatable {
   final String paymentMethod;
   final double driverRatingAvg;
   final int driverRatingCount;
+  final bool instantBook;
   final String? driverName;
   final String? driverGender;
   /// Revealed only on ride detail after a confirmed booking (else null).

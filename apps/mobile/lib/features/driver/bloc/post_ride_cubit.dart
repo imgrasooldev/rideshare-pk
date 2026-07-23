@@ -47,6 +47,7 @@ class PostRideCubit extends Cubit<PostRideState> {
     required int pricePerSeat,
     String vehicleType = 'car',
     bool ladiesOnly = false,
+    bool instantBook = false,
   }) async {
     if (state is PostRideSubmitting) return;
     emit(const PostRideSubmitting());
@@ -60,6 +61,7 @@ class PostRideCubit extends Cubit<PostRideState> {
         pricePerSeat: pricePerSeat,
         vehicleType: vehicleType,
         ladiesOnly: ladiesOnly,
+        instantBook: instantBook,
       );
       emit(PostRideSuccess(ride));
     } on ApiException catch (e) {

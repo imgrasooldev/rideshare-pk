@@ -23,7 +23,8 @@ const postRideDto = z.object({
     .enum(["office", "school", "city", "rentacar", "ladies", "parcel", "corporate", "airport", "events"])
     .default("office"),
   vehicleType: z.enum(["car", "bike", "hiace", "minivan"]).default("car"),
-  ladiesOnly: z.boolean().default(false)
+  ladiesOnly: z.boolean().default(false),
+  instantBook: z.boolean().default(false)
 });
 
 const searchDto = z.object({

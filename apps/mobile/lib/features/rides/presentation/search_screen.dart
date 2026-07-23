@@ -117,8 +117,11 @@ class _SearchScreenState extends State<SearchScreen> {
       listener: (context, state) {
         final messenger = ScaffoldMessenger.of(context);
         if (state is BookingSuccess) {
+          final confirmed = state.booking.status == 'confirmed';
           messenger.showSnackBar(SnackBar(
-            content: const Text('Request sent — the driver will accept or counter-offer.'),
+            content: Text(confirmed
+                ? 'Booked! Your seat is confirmed.'
+                : 'Request sent — the driver will accept or counter-offer.'),
             backgroundColor: Colors.green.shade700,
           ));
           context.read<BookingActionCubit>().reset();
@@ -603,6 +606,7 @@ class _RideCard extends StatelessWidget {
                   color: seatsLow ? const Color(0xFFB26A00) : null,
                 ),
                 if (ride.ladiesOnly) const StatusPill('Ladies only', color: Color(0xFFC2185B)),
+                if (ride.instantBook) const StatusPill('Instant', color: Color(0xFF12A46B)),
                 const StatusPill('Cash', color: Color(0xFF00695C)),
               ],
             ),
@@ -623,9 +627,9 @@ class _RideCard extends StatelessWidget {
                     ? () => context.read<BookingActionCubit>().book(ride.id, 1)
                     : null,
                 child: Text(inFlight
-                    ? 'Requesting…'
+                    ? (ride.instantBook ? 'Booking…' : 'Requesting…')
                     : ride.seatsAvailable > 0
-                        ? 'Request seat'
+                        ? (ride.instantBook ? 'Book instantly' : 'Request seat')
                         : 'Full'),
               ),
             ),

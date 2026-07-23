@@ -55,9 +55,30 @@ export class BookingsService {
     }
     // A request holds no seat — the driver accepts to confirm it.
     const booking = await this.bookings.create(riderId, rideId, seats, idempotencyKey);
-
-    // Ping the driver's request inbox (best-effort, never blocks the request).
     const rider = await this.users.findById(riderId);
+
+    // Instant-book rides skip the queue: auto-confirm on the driver's behalf
+    // (race-safe seat decrement inside accept). Clean up the request if the
+    // ride filled between create and accept.
+    if (ride.instantBook) {
+      let confirmed: BookingRecord;
+      try {
+        confirmed = await this.bookings.accept(booking.id, ride.driverId);
+      } catch (err) {
+        await this.bookings.cancel(booking.id, riderId).catch(() => {});
+        throw err;
+      }
+      void this.notifications.notify(
+        ride.driverId,
+        "booking",
+        "New booking",
+        `${rider?.name ?? "A rider"} booked ${seats} seat${seats > 1 ? "s" : ""} · ${ride.originLabel} → ${ride.destLabel}`,
+        { rideId, bookingId: confirmed.id }
+      );
+      return confirmed;
+    }
+
+    // Otherwise, ping the driver's request inbox (best-effort).
     void this.notifications.notify(
       ride.driverId,
       "booking_request",

@@ -22,6 +22,7 @@ class _PostRideScreenState extends State<PostRideScreen> {
   final Set<int> _days = {1, 2, 3, 4, 5}; // Mon–Fri
   int _seats = 3;
   bool _ladiesOnly = false;
+  bool _instantBook = false;
   String _vehicleType = 'car';
   final _priceController = TextEditingController(text: '250');
 
@@ -76,6 +77,7 @@ class _PostRideScreenState extends State<PostRideScreen> {
           pricePerSeat: price,
           vehicleType: _vehicleType,
           ladiesOnly: _ladiesOnly,
+          instantBook: _instantBook,
         );
   }
 
@@ -189,6 +191,13 @@ class _PostRideScreenState extends State<PostRideScreen> {
             ),
             if (isFemale) ...[
               const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Instant book'),
+                subtitle: const Text('Auto-confirm seats — no request approval needed'),
+                value: _instantBook,
+                onChanged: (v) => setState(() => _instantBook = v),
+              ),
               SwitchListTile(
                 title: const Text('Ladies only'),
                 subtitle: const Text('Only women can see and book this ride'),

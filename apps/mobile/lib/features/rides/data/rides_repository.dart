@@ -89,6 +89,7 @@ class RidesRepository {
     required int pricePerSeat,
     String vehicleType = 'car',
     bool ladiesOnly = false,
+    bool instantBook = false,
   }) async {
     final res = await _api.post('/rides', body: {
       'vehicleType': vehicleType,
@@ -103,6 +104,7 @@ class RidesRepository {
       'seatsTotal': seatsTotal,
       'pricePerSeat': pricePerSeat,
       'ladiesOnly': ladiesOnly,
+      'instantBook': instantBook,
     });
     return Ride.fromJson(res);
   }
