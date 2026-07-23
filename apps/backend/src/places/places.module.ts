@@ -4,6 +4,8 @@ import { PlacesRepository } from "./places.repo.js";
 
 @Module({
   controllers: [PlacesController],
-  providers: [PlacesRepository]
+  providers: [PlacesRepository],
+  // Rides uses the router to store each ride's polyline for corridor matching.
+  exports: [PlacesRepository]
 })
 export class PlacesModule {}

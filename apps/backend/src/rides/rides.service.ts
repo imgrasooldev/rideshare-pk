@@ -6,6 +6,7 @@ import {
   NotFoundException
 } from "@nestjs/common";
 import type { AppConfig } from "../config/config.js";
+import { PlacesRepository } from "../places/places.repo.js";
 import { APP_CONFIG, RIDE_REPOSITORY, USER_REPOSITORY, VEHICLE_REPOSITORY } from "../shared/tokens.js";
 import type { UserRepository } from "../users/users.repo.js";
 import type { VehicleRepository } from "../vehicles/vehicles.repo.js";
@@ -19,7 +20,8 @@ export class RidesService {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(RIDE_REPOSITORY) private readonly rides: RideRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    @Inject(VEHICLE_REPOSITORY) private readonly vehicles: VehicleRepository
+    @Inject(VEHICLE_REPOSITORY) private readonly vehicles: VehicleRepository,
+    private readonly places?: PlacesRepository
   ) {}
 
   async post(driverId: string, input: PostRideInput): Promise<RideRecord> {
@@ -54,7 +56,26 @@ export class RidesService {
       }
     }
 
-    return this.rides.create({ ...input, driverId, city: user.city });
+    // Store the driving polyline so riders can be matched anywhere ALONG the
+    // route, not just near its endpoints. Best-effort: a routing outage must
+    // never block posting a ride — the ride simply falls back to endpoint
+    // matching until it is backfilled.
+    let routePoints = input.routePoints;
+    if (!routePoints && this.places) {
+      try {
+        const route = await this.places.route(
+          input.originLat,
+          input.originLng,
+          input.destLat,
+          input.destLng
+        );
+        routePoints = route.points;
+      } catch {
+        /* keep routePoints undefined */
+      }
+    }
+
+    return this.rides.create({ ...input, routePoints, driverId, city: user.city });
   }
 
   async getById(id: string): Promise<RideRecord> {

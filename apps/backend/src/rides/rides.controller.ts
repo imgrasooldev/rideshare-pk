@@ -38,6 +38,11 @@ const searchDto = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
+  // Defaults on: also match rides passing near both points mid-route.
+  alongRoute: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
   vehicleType: z.enum(["car", "bike", "hiace", "minivan"]).optional(),
   vertical: z
     .enum(["office", "school", "city", "rentacar", "ladies", "parcel", "corporate", "airport", "events"])
@@ -71,6 +76,7 @@ export class RidesController {
       departAfter: dto.departAfter,
       departBefore: dto.departBefore,
       ladiesOnly: dto.ladiesOnly,
+      alongRoute: dto.alongRoute,
       vehicleType: dto.vehicleType,
       vertical: dto.vertical,
       city: dto.city,

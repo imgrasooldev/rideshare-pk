@@ -135,6 +135,64 @@ describe("RidesService", () => {
       expect(early.items).toHaveLength(0);
     });
 
+    // Gulberg -> Johar Town -> DHA: a rider joining at Johar Town is nowhere
+    // near either endpoint, so only corridor matching can find this ride.
+    const viaJoharTown: Array<[number, number]> = [
+      [31.5102, 74.3441], // Gulberg (origin)
+      [31.4900, 74.3100],
+      [31.4676, 74.2664], // Johar Town (mid-route)
+      [31.4650, 74.3400],
+      [31.4622, 74.4082] // DHA Phase 5 (destination)
+    ];
+
+    it("matches a rider joining mid-route, which endpoint matching misses", async () => {
+      const ride = await service.post(driverId, { ...baseRide, routePoints: viaJoharTown });
+
+      // Johar Town -> DHA: pickup is ~8km from the driver's origin.
+      const midRoute = {
+        ...nearGulbergToDha,
+        pickupLat: 31.4676,
+        pickupLng: 74.2664,
+        dropLat: 31.4622,
+        dropLng: 74.4082
+      };
+
+      const found = await service.search(midRoute);
+      expect(found.items.map((r) => r.id)).toContain(ride.id);
+
+      // Endpoint-only search cannot see it — this is the gain.
+      const endpointOnly = await service.search({ ...midRoute, alongRoute: false });
+      expect(endpointOnly.items).toHaveLength(0);
+    });
+
+    it("does not match a rider travelling the opposite way along the route", async () => {
+      await service.post(driverId, { ...baseRide, routePoints: viaJoharTown });
+
+      // DHA -> Johar Town: both points are on the corridor, but backwards.
+      const reversed = await service.search({
+        ...nearGulbergToDha,
+        pickupLat: 31.4622,
+        pickupLng: 74.4082,
+        dropLat: 31.4676,
+        dropLng: 74.2664
+      });
+      expect(reversed.items).toHaveLength(0);
+    });
+
+    it("ignores rides whose corridor passes nowhere near the rider", async () => {
+      await service.post(driverId, { ...baseRide, routePoints: viaJoharTown });
+
+      // Bahria Town — ~20km off the corridor.
+      const offCorridor = await service.search({
+        ...nearGulbergToDha,
+        pickupLat: 31.367,
+        pickupLng: 74.1845,
+        dropLat: 31.4622,
+        dropLng: 74.4082
+      });
+      expect(offCorridor.items).toHaveLength(0);
+    });
+
     it("filters by vehicle type", async () => {
       await service.post(driverId, baseRide);
       await service.post(driverId, { ...baseRide, vehicleType: "hiace", seatsTotal: 12 });
