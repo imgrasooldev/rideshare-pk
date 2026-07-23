@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from "@nes
 import { normalizePkPhone } from "../auth/phone.js";
 import type { AppConfig } from "../config/config.js";
 import { decryptString, encryptString } from "../shared/crypto.js";
+import { PlacesRepository } from "../places/places.repo.js";
 import { APP_CONFIG, USER_REPOSITORY } from "../shared/tokens.js";
 import type { UserRecord, UserRepository } from "./users.repo.js";
 
@@ -28,13 +29,15 @@ export interface UpdateMeInput {
   gender?: NonNullable<UserRecord["gender"]>;
   cnic?: string;
   emergencyPhone?: string;
+  city?: string;
 }
 
 @Injectable()
 export class UsersService {
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
-    @Inject(USER_REPOSITORY) private readonly users: UserRepository
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    private readonly places: PlacesRepository
   ) {}
 
   async getMe(userId: string): Promise<ProfileView> {
@@ -60,12 +63,26 @@ export class UsersService {
       }
       emergencyPhone = normalised;
     }
+    let city: string | undefined;
+    if (input.city !== undefined) {
+      // Validate against the real city list: an unknown slug would silently
+      // leave the user in a city with no hubs and no rides.
+      const slug = input.city.trim().toLowerCase();
+      const known = await this.places.cities();
+      if (!known.some((c) => c.slug === slug)) {
+        throw new BadRequestException(
+          `Unknown city. Available: ${known.map((c) => c.slug).join(", ")}`
+        );
+      }
+      city = slug;
+    }
     const updated = await this.users.updateProfile(userId, {
       name: input.name,
       role: input.role,
       gender: input.gender,
       cnic: cnicEncrypted,
-      emergencyPhone
+      emergencyPhone,
+      city
     });
     if (!updated) throw new NotFoundException("User not found");
     return this.toView(updated);

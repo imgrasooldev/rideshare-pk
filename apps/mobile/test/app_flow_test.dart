@@ -318,6 +318,22 @@ void main() {
     expect(auth.sessionUser?.name, 'GR Khan');
   });
 
+  testWidgets('picking a city saves it to the account, not just the session',
+      (tester) async {
+    await login(tester);
+    expect(auth.sessionUser?.city, 'lahore');
+
+    // The city chip on the home header opens the picker.
+    await tester.tap(find.text('Lahore'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Karachi'));
+    await tester.pumpAndSettle();
+
+    // Previously this only swapped the hub list in memory, so the choice was
+    // lost on restart and rides were still filed under the old city.
+    expect(auth.sessionUser?.city, 'karachi');
+  });
+
   testWidgets('bookings tab lists my booking and cancel updates it', (tester) async {
     await login(tester);
     await tester.tap(find.text('Search'));

@@ -115,14 +115,19 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<User> updateProfile(
-      {String? name, String? role, String? gender, String? cnic, String? emergencyPhone}) async {
+      {String? name,
+      String? role,
+      String? gender,
+      String? cnic,
+      String? emergencyPhone,
+      String? city}) async {
     final base = sessionUser ?? demoUser;
     final updated = User(
       id: base.id,
       phone: base.phone,
       role: role ?? base.role,
       verified: base.verified,
-      city: base.city,
+      city: city ?? base.city,
       name: name ?? base.name,
       gender: gender ?? base.gender,
       cnicMasked: cnic != null ? '*********${cnic.replaceAll('-', '').substring(9)}' : base.cnicMasked,

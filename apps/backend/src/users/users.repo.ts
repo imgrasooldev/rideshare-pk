@@ -32,6 +32,7 @@ export interface ProfilePatch {
   gender?: NonNullable<UserRecord["gender"]>;
   cnic?: string; // already encrypted by the service layer
   emergencyPhone?: string; // already normalised to E.164 by the service layer
+  city?: string; // already validated against the cities table by the service layer
 }
 
 export interface NewEmailUser {
@@ -123,6 +124,7 @@ export class PgUserRepository implements UserRepository {
          gender = COALESCE($4, gender),
          cnic = COALESCE($5, cnic),
          emergency_phone = COALESCE($6, emergency_phone),
+         city = COALESCE($7, city),
          updated_at = now()
        WHERE id = $1 AND deleted_at IS NULL
        RETURNING ${COLS}`,
@@ -132,7 +134,8 @@ export class PgUserRepository implements UserRepository {
         patch.role ?? null,
         patch.gender ?? null,
         patch.cnic ?? null,
-        patch.emergencyPhone ?? null
+        patch.emergencyPhone ?? null,
+        patch.city ?? null
       ]
     );
     return rows[0] ?? null;
@@ -235,6 +238,7 @@ export class InMemoryUserRepository implements UserRepository {
     if (patch.gender !== undefined) user.gender = patch.gender;
     if (patch.cnic !== undefined) user.cnic = patch.cnic;
     if (patch.emergencyPhone !== undefined) user.emergencyPhone = patch.emergencyPhone;
+    if (patch.city !== undefined) user.city = patch.city;
     return user;
   }
 

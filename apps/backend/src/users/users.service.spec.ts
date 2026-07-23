@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../config/config.js";
+import { PlacesRepository } from "../places/places.repo.js";
 import { InMemoryUserRepository } from "./users.repo.js";
 import { UsersService } from "./users.service.js";
 
@@ -10,7 +11,8 @@ describe("UsersService", () => {
 
   beforeEach(async () => {
     repo = new InMemoryUserRepository();
-    service = new UsersService(loadConfig({}), repo);
+    // Null pool -> the repository's built-in karachi/lahore fallback list.
+    service = new UsersService(loadConfig({}), repo, new PlacesRepository(null));
     userId = (await repo.upsertByPhone("+923001234567", "lahore")).id;
   });
 
@@ -48,6 +50,17 @@ describe("UsersService", () => {
     const me = await service.updateMe(userId, { role: "both" });
     expect(me.name).toBe("GR");
     expect(me.role).toBe("both");
+  });
+
+  it("moves the user to another city", async () => {
+    const me = await service.updateMe(userId, { city: "Karachi" });
+    expect(me.city).toBe("karachi"); // normalised to the slug
+  });
+
+  it("rejects a city that isn't in the city list", async () => {
+    // Silently accepting this would leave the user somewhere with no rides.
+    await expect(service.updateMe(userId, { city: "karachiii" })).rejects.toThrow(/Unknown city/);
+    expect((await service.getMe(userId)).city).toBe("lahore");
   });
 
   it("404s for unknown users", async () => {
