@@ -7,6 +7,7 @@ import '../../auth/data/models/user.dart';
 import '../../rides/data/rides_repository.dart'
     show vehicleTypeIcon, vehicleTypeLabel, vehicleTypes;
 import '../../../l10n/app_localizations.dart';
+import '../../favourites/presentation/favourites_screen.dart';
 import '../../referrals/presentation/referral_screen.dart';
 import '../../safety/presentation/blocked_users_screen.dart';
 import '../../settings/locale_cubit.dart';
@@ -139,6 +140,18 @@ class ProfileScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const SubscriptionsScreen()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(Icons.favorite_rounded, color: theme.colorScheme.primary),
+              title: const Text('Favourites'),
+              subtitle: const Text('Favourite drivers & saved routes'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const FavouritesScreen()),
               ),
             ),
           ),

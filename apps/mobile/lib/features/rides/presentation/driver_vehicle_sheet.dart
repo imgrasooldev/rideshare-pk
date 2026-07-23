@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../favourites/data/favourites_repository.dart';
 import '../data/models/ride.dart';
 import '../data/rides_repository.dart';
 
@@ -29,9 +30,54 @@ Future<void> showDriverSheet(BuildContext context, String rideId) async {
   );
 }
 
-class _DriverVehicle extends StatelessWidget {
+class _DriverVehicle extends StatefulWidget {
   const _DriverVehicle({required this.ride});
   final Ride ride;
+
+  @override
+  State<_DriverVehicle> createState() => _DriverVehicleState();
+}
+
+class _DriverVehicleState extends State<_DriverVehicle> {
+  Ride get ride => widget.ride;
+  bool? _favourited; // null = still loading
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavourite();
+  }
+
+  Future<void> _loadFavourite() async {
+    try {
+      final ids = await context.read<FavouritesRepository>().favouriteIds();
+      if (mounted) setState(() => _favourited = ids.contains(ride.driverId));
+    } catch (_) {
+      if (mounted) setState(() => _favourited = false);
+    }
+  }
+
+  Future<void> _toggleFavourite() async {
+    if (_busy || _favourited == null) return;
+    final repo = context.read<FavouritesRepository>();
+    final next = !_favourited!;
+    setState(() {
+      _busy = true;
+      _favourited = next; // optimistic
+    });
+    try {
+      if (next) {
+        await repo.addFavourite(ride.driverId);
+      } else {
+        await repo.removeFavourite(ride.driverId);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _favourited = !next); // revert
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _call(BuildContext context) async {
     final phone = ride.driverPhone;
@@ -84,6 +130,14 @@ class _DriverVehicle extends StatelessWidget {
                         ],
                       ),
                   ],
+                ),
+              ),
+              IconButton(
+                tooltip: _favourited == true ? 'Remove favourite' : 'Add to favourites',
+                onPressed: _favourited == null ? null : _toggleFavourite,
+                icon: Icon(
+                  _favourited == true ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: _favourited == true ? theme.colorScheme.primary : theme.colorScheme.outline,
                 ),
               ),
             ],

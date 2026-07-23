@@ -18,6 +18,7 @@ import '../../safety/data/blocks_repository.dart';
 import '../../subscriptions/data/subscriptions_repository.dart';
 import '../bloc/ride_search_bloc.dart';
 import '../data/models/ride.dart';
+import '../../favourites/data/favourites_repository.dart';
 import '../data/rides_repository.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -41,6 +42,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _vehicleType; // null = any
   late String? _vertical = widget.initialVertical;
   bool _femaleDriver = false; // prefer women drivers
+  List<SavedRoute> _savedRoutes = [];
 
   @override
   void initState() {
@@ -50,6 +52,45 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_vertical != null || _ladiesOnly) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _search());
     }
+    _loadSavedRoutes();
+  }
+
+  Future<void> _loadSavedRoutes() async {
+    try {
+      final routes = await context.read<FavouritesRepository>().listRoutes();
+      if (mounted) setState(() => _savedRoutes = routes);
+    } catch (_) {
+      /* saved routes are a convenience — silent on failure */
+    }
+  }
+
+  Future<void> _saveCurrentRoute() async {
+    final pickup = _pickup;
+    final drop = _drop;
+    if (pickup == null || drop == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<FavouritesRepository>().saveRoute(
+            originLabel: pickup.label,
+            originLat: pickup.lat,
+            originLng: pickup.lng,
+            destLabel: drop.label,
+            destLat: drop.lat,
+            destLng: drop.lng,
+          );
+      messenger.showSnackBar(const SnackBar(content: Text('Route saved')));
+      await _loadSavedRoutes();
+    } catch (_) {
+      messenger.showSnackBar(const SnackBar(content: Text('Could not save route')));
+    }
+  }
+
+  void _applySavedRoute(SavedRoute r) {
+    setState(() {
+      _pickup = Hub(r.originLabel, r.originLat ?? 0, r.originLng ?? 0);
+      _drop = Hub(r.destLabel, r.destLat ?? 0, r.destLng ?? 0);
+    });
+    _search();
   }
 
   @override
@@ -153,6 +194,40 @@ class _SearchScreenState extends State<SearchScreen> {
               _drop = t;
             }),
             onSearch: _search,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _savedRoutes.isEmpty
+                    ? Text('Save a route for one-tap search',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.outline))
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final r in _savedRoutes)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ActionChip(
+                                  avatar: const Icon(Icons.bookmark_rounded, size: 16),
+                                  label: Text(r.label?.isNotEmpty == true
+                                      ? r.label!
+                                      : '${r.originLabel} → ${r.destLabel}'),
+                                  onPressed: () => _applySavedRoute(r),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+              ),
+              IconButton(
+                tooltip: 'Save this route',
+                onPressed: _saveCurrentRoute,
+                icon: const Icon(Icons.bookmark_add_outlined),
+              ),
+            ],
           ),
           if (_vertical != null) ...[
             const SizedBox(height: 12),
