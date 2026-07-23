@@ -61,6 +61,22 @@ export class BookingsService {
     return this.bookings.cancel(bookingId, riderId, reason);
   }
 
+  /**
+   * Pickup check: the driver enters the 4-digit PIN the passenger reads out,
+   * proving the right person is getting into the right car.
+   */
+  async verifyStartPin(driverId: string, bookingId: string, pin: string): Promise<BookingRecord> {
+    const booking = await this.bookings.verifyStartPin(bookingId, driverId, pin);
+    void this.notifications.notify(
+      booking.riderId,
+      "booking_update",
+      "Pickup confirmed",
+      "Your driver confirmed your PIN. Have a safe trip!",
+      { rideId: booking.rideId, bookingId: booking.id }
+    );
+    return booking;
+  }
+
   /** Driver marks a confirmed rider a no-show; frees the seat and notifies them. */
   async noShow(driverId: string, bookingId: string): Promise<BookingRecord> {
     const booking = await this.bookings.noShow(bookingId, driverId);

@@ -125,6 +125,67 @@ describe("BookingsService", () => {
     expect((await rides.findById(ride.id))!.seatsAvailable).toBe(2);
   });
 
+  describe("trip start PIN", () => {
+    it("issues a 4-digit PIN to the rider on confirmation", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin1");
+      expect(b.startPin).toBeUndefined(); // not while merely requested
+
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      expect(confirmed.startPin).toMatch(/^\d{4}$/);
+      expect(confirmed.pickedUpAt).toBeFalsy();
+    });
+
+    it("never exposes the PIN on the driver's passenger manifest", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin2");
+      await service.respond(driverId, b.id, "accept");
+
+      // The whole point: the driver must ask the passenger for it.
+      const manifest = await service.ridePassengers(driverId, ride.id);
+      expect(manifest).toHaveLength(1);
+      expect(manifest[0]!.startPin).toBeUndefined();
+    });
+
+    it("confirms pickup with the right PIN and rejects a wrong one", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin3");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      const pin = confirmed.startPin!;
+      const wrong = pin === "0000" ? "1111" : "0000";
+
+      await expect(service.verifyStartPin(driverId, b.id, wrong)).rejects.toThrow(/Incorrect PIN/);
+
+      const picked = await service.verifyStartPin(driverId, b.id, pin);
+      expect(picked.pickedUpAt).toBeTruthy();
+
+      // Single-shot: a second pickup is refused.
+      await expect(service.verifyStartPin(driverId, b.id, pin)).rejects.toThrow(
+        /already picked up/
+      );
+    });
+
+    it("locks the PIN after repeated wrong guesses (10k combinations)", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin4");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      const pin = confirmed.startPin!;
+      const wrong = pin === "0000" ? "1111" : "0000";
+
+      for (let i = 0; i < 5; i++) {
+        await expect(service.verifyStartPin(driverId, b.id, wrong)).rejects.toThrow(/Incorrect/);
+      }
+      // Even the CORRECT PIN is refused once locked.
+      await expect(service.verifyStartPin(driverId, b.id, pin)).rejects.toThrow(/Too many/);
+    });
+
+    it("only the ride's own driver can verify a PIN", async () => {
+      const b = await service.book(riderId, ride.id, 1, "pin5");
+      const confirmed = await service.respond(driverId, b.id, "accept");
+      const stranger = await users.upsertByPhone("+923007777777", "lahore");
+
+      await expect(
+        service.verifyStartPin(stranger.id, b.id, confirmed.startPin!)
+      ).rejects.toThrow(/not found|not on your ride/i);
+    });
+  });
+
   it("driver marks a confirmed rider a no-show, freeing the seat", async () => {
     const b = await service.book(riderId, ride.id, 1, "ns1");
     await service.respond(driverId, b.id, "accept");

@@ -13,6 +13,7 @@ const bookDto = z.object({
 const counterDto = z.object({ offeredPrice: z.number().int().min(0).max(100_000) });
 const respondDto = z.object({ accept: z.boolean() });
 const cancelDto = z.object({ reason: z.string().trim().max(200).optional() });
+const verifyPinDto = z.object({ pin: z.string().regex(/^\d{4}$/, "PIN must be 4 digits") });
 
 @Controller("bookings")
 @UseGuards(JwtAuthGuard)
@@ -69,6 +70,14 @@ export class BookingsController {
   cancel(@Req() req: AuthedRequest, @Param("id") id: string, @Body() body: unknown) {
     const dto = parse(cancelDto, body ?? {});
     return this.bookings.cancel(id, req.user.sub, dto.reason);
+  }
+
+  /** Driver enters the PIN the passenger reads out, confirming the pickup. */
+  @Post(":id/verify-pin")
+  @HttpCode(200)
+  verifyPin(@Req() req: AuthedRequest, @Param("id") id: string, @Body() body: unknown) {
+    const dto = parse(verifyPinDto, body);
+    return this.bookings.verifyStartPin(req.user.sub, id, dto.pin);
   }
 
   /** Driver marks a confirmed rider a no-show. */
