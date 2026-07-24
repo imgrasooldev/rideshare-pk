@@ -43,6 +43,17 @@ class FakeAuthRepository implements AuthRepository {
     cnicMasked: '*********5671',
   );
 
+  static const karachiDriverUser = User(
+    id: 'u3',
+    phone: '+923009990000',
+    name: 'Bilal Driver',
+    role: 'driver',
+    gender: 'male',
+    verified: true,
+    city: 'karachi',
+    cnicMasked: '*********1234',
+  );
+
   /// The user returned by a successful OTP verify.
   User loginAs = demoUser;
   final registered = <String, String>{}; // email -> password
@@ -426,11 +437,17 @@ class FakeBookingsRepository implements BookingsRepository {
 
 class FakePlacesRepository implements PlacesRepository {
   @override
-  Future<List<Hub>> hubs(String city) async => const [
-        Hub('Gulberg (Liberty Market)', 31.5102, 74.3441),
-        Hub('DHA Phase 5', 31.4622, 74.4082),
-        Hub('Johar Town (Emporium)', 31.4676, 74.2664),
-      ];
+  Future<List<Hub>> hubs(String city) async => city == 'karachi'
+      ? const [
+          Hub('Saddar', 24.86, 67.03),
+          Hub('Clifton', 24.8138, 67.03),
+          Hub('Gulshan-e-Iqbal', 24.92, 67.09),
+        ]
+      : const [
+          Hub('Gulberg (Liberty Market)', 31.5102, 74.3441),
+          Hub('DHA Phase 5', 31.4622, 74.4082),
+          Hub('Johar Town (Emporium)', 31.4676, 74.2664),
+        ];
 
   @override
   Future<List<City>> cities() async => const [

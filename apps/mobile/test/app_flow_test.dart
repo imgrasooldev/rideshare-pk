@@ -303,6 +303,37 @@ void main() {
     expect(find.text('Gulberg (Liberty Market)'), findsWidgets);
   });
 
+  testWidgets('driver posts in their own city, not a hardcoded Lahore', (tester) async {
+    // Regression: Post-a-ride used a hardcoded lahoreHubs list, so a Karachi
+    // driver could only ever post Lahore routes.
+    auth.loginAs = FakeAuthRepository.karachiDriverUser;
+    await login(tester);
+
+    await tester.scrollUntilVisible(
+      find.text('Switch to Driver Mode'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Switch to Driver Mode'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rides'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Post ride'));
+    await tester.pumpAndSettle();
+
+    // From/To default to the driver's Karachi hubs — not DHA Phase 5 / Gulberg.
+    expect(find.text('Clifton'), findsOneWidget); // From = hubs[1]
+    expect(find.text('Saddar'), findsOneWidget); // To   = hubs[0]
+    expect(find.text('DHA Phase 5'), findsNothing);
+
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Post ride'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Post ride'));
+    await tester.pumpAndSettle();
+
+    expect(rides.posted.single.originLabel, 'Clifton');
+    expect(rides.posted.single.destLabel, 'Saddar');
+  });
+
   testWidgets('profile edit saves role change and updates the app user', (tester) async {
     await login(tester);
     await tester.tap(find.text('Profile'));

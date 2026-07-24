@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../../auth/bloc/auth_bloc.dart';
+import '../../places/bloc/places_cubit.dart';
+import '../../places/presentation/place_picker.dart';
 import '../../rides/data/rides_repository.dart';
 import '../bloc/post_ride_cubit.dart';
 
@@ -16,8 +18,10 @@ class PostRideScreen extends StatefulWidget {
 }
 
 class _PostRideScreenState extends State<PostRideScreen> {
-  Hub _origin = lahoreHubs[1];
-  Hub _dest = lahoreHubs[0];
+  // Null until the city's hubs load (or the driver picks a point). Defaulted
+  // from the loaded hubs in build — never from a hardcoded city.
+  Hub? _origin;
+  Hub? _dest;
   DateTime _departAt = _nextMorning();
   final Set<int> _days = {1, 2, 3, 4, 5}; // Mon–Fri
   int _seats = 3;
@@ -36,6 +40,15 @@ class _PostRideScreenState extends State<PostRideScreen> {
   static DateTime _nextMorning() {
     final tomorrow = DateTime.now().add(const Duration(days: 1));
     return DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 8);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Load pickup/drop points for the DRIVER's city — not a hardcoded one.
+    final auth = context.read<AuthBloc>().state;
+    final city = auth is AuthAuthenticated ? auth.user.city : 'lahore';
+    context.read<PlacesCubit>().load(city);
   }
 
   @override
@@ -62,6 +75,18 @@ class _PostRideScreenState extends State<PostRideScreen> {
   }
 
   void _submit() {
+    final origin = _origin;
+    final dest = _dest;
+    if (origin == null || dest == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Choose your From and To points')));
+      return;
+    }
+    if (origin.label == dest.label) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('From and To must be different')));
+      return;
+    }
     final price = int.tryParse(_priceController.text.trim());
     if (price == null || price < 0) {
       ScaffoldMessenger.of(context)
@@ -69,8 +94,8 @@ class _PostRideScreenState extends State<PostRideScreen> {
       return;
     }
     context.read<PostRideCubit>().submit(
-          origin: _origin,
-          dest: _dest,
+          origin: origin,
+          dest: dest,
           departAt: _departAt,
           recurringDays: (_days.toList()..sort()).map((d) => d % 7).toList(),
           seatsTotal: _seats,
@@ -104,24 +129,46 @@ class _PostRideScreenState extends State<PostRideScreen> {
         body: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            DropdownButtonFormField<Hub>(
-              initialValue: _origin,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'From', border: OutlineInputBorder()),
-              items: [
-                for (final h in lahoreHubs) DropdownMenuItem(value: h, child: Text(h.label)),
-              ],
-              onChanged: (h) => setState(() => _origin = h ?? _origin),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<Hub>(
-              initialValue: _dest,
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'To', border: OutlineInputBorder()),
-              items: [
-                for (final h in lahoreHubs) DropdownMenuItem(value: h, child: Text(h.label)),
-              ],
-              onChanged: (h) => setState(() => _dest = h ?? _dest),
+            BlocBuilder<PlacesCubit, PlacesState>(
+              builder: (context, places) {
+                final hubs = places.hubs;
+                // Default From/To to the city's first hubs once they load; a
+                // point the driver searched for is preserved (only ??= when null).
+                if (hubs.isNotEmpty) {
+                  _origin ??= hubs.length > 1 ? hubs[1] : hubs.first;
+                  _dest ??= hubs.first;
+                }
+                final loading = places.loading && hubs.isEmpty;
+                Future<void> pick(bool isOrigin) async {
+                  final picked = await showPlacePicker(
+                    context,
+                    title: isOrigin ? 'Pick-up point' : 'Drop-off point',
+                    hubs: hubs,
+                    city: places.city,
+                  );
+                  if (picked != null) {
+                    setState(() => isOrigin ? _origin = picked : _dest = picked);
+                  }
+                }
+
+                return Column(
+                  children: [
+                    _PlaceField(
+                      label: 'From',
+                      hub: _origin,
+                      loading: loading,
+                      onTap: hubs.isEmpty ? null : () => pick(true),
+                    ),
+                    const SizedBox(height: 12),
+                    _PlaceField(
+                      label: 'To',
+                      hub: _dest,
+                      loading: loading,
+                      onTap: hubs.isEmpty ? null : () => pick(false),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -214,6 +261,46 @@ class _PostRideScreenState extends State<PostRideScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A tappable From/To field that opens the shared place picker (curated hubs +
+/// free-text address search). Shows the chosen point, a hint, or a loader.
+class _PlaceField extends StatelessWidget {
+  const _PlaceField({
+    required this.label,
+    required this.hub,
+    required this.onTap,
+    this.loading = false,
+  });
+
+  final String label;
+  final Hub? hub;
+  final VoidCallback? onTap;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          suffixIcon: const Icon(Icons.search),
+        ),
+        child: loading
+            ? Text('Loading points…', style: TextStyle(color: theme.colorScheme.outline))
+            : Text(
+                hub?.label ?? 'Tap to choose or search',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: hub == null ? TextStyle(color: theme.colorScheme.outline) : null,
+              ),
       ),
     );
   }

@@ -59,7 +59,13 @@ const CURATED = {
     // Airport runs
     ["Jinnah Intl Airport", "Saddar"],
     ["Jinnah Intl Airport", "Clifton"],
-    ["Jinnah Intl Airport", "DHA Phase 5"]
+    ["Jinnah Intl Airport", "DHA Phase 5"],
+    // Northern Superhighway growth belt (Maymar / Ahsanabad)
+    ["Gulshan-e-Maymar", "Saddar"],
+    ["Gulshan-e-Maymar", "II Chundrigar Road"],
+    ["Ahsanabad", "Garden"],
+    ["Ahsanabad", "Saddar"],
+    ["Gulshan-e-Maymar", "Gulshan-e-Iqbal"]
   ]
 };
 
